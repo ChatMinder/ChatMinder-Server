@@ -1,0 +1,39 @@
+version: '3'
+services:
+
+  web:
+    container_name: web
+    build:
+      context: ./
+      dockerfile: Dockerfile.prod
+    command: gunicorn server.wsgi:application --bind 0.0.0.0:8888
+    environment:
+      DJANGO_SETTINGS_MODULE: server.settings.prod
+    env_file:
+      - .env
+    volumes:
+      - static:/home/app/web/static
+      - media:/home/app/web/media
+    expose:
+      - 8888
+    entrypoint:
+      - sh
+      - config/docker/entrypoint.prod.sh
+
+  nginx:
+    container_name: nginx
+    build: ./config/nginx
+    volumes:
+      - static:/home/app/web/static
+      - media:/home/app/web/media
+      - /etc/letsencrypt/archive/chatminder.cf:/etc/nginx/conf.d/certificate
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - web
+
+
+volumes:
+  static:
+  media:
