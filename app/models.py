@@ -17,9 +17,10 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     kakao_id = models.CharField(max_length=40, unique=True, null=False, blank=False)
     kakao_email = models.EmailField(unique=True, null=False, blank=False)
     is_superuser = models.BooleanField(default=False)
+    nickname = models.CharField(max_length=20, null=False, blank=False, default="anonymous")
 
     USERNAME_FIELD = 'kakao_id'
-    REQUIRED_FIELDS = ['kakao_email',]
+    REQUIRED_FIELDS = ['kakao_email', 'nickname']
 
     class Meta:
         db_table = 'user'
