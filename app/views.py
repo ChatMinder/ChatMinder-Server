@@ -1,27 +1,23 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 
-from app.models import *
 from app.serializer import *
 
 
-class HelloView(APIView):
-    def get(self, request):
-        return Response("GET Hello", status=200)
-
-    def post(self, request):
-        return Response("POST Hello", status=200)
-
-    def patch(self, request):
-        return Response("PATCH Hello", status=200)
-
-    def delete(self, request):
-        return Response("DELETE Hello", status=200)
+class MemoViewSet(ModelViewSet):
+    queryset = Memo.objects.all()
+    serializer_class = MemoSerializer
+    pagination_class = PageNumberPagination
 
 
+"""
 class MemoListView(APIView):
+    pagination_class = PageNumberPagination
+
     def get(self, request):
         memos = Memo.objects.all()
         serializer = MemoSerializer(memos, many=True)
@@ -57,3 +53,5 @@ class MemoDetailView(APIView):
         memo.delete()
         return Response("삭제 완료", status=status.HTTP_200_OK)
 
+
+"""

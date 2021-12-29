@@ -1,9 +1,9 @@
 from django.urls import include, path
+from rest_framework import routers
 
 from app.views import *
 
-urlpatterns = [
-    path('hello', HelloView.as_view()),
-    path('memos', MemoListView.as_view()),
-    path('memos/<int:pk>', MemoDetailView.as_view())
-]
+router = routers.DefaultRouter()
+router.register(r'memos', MemoViewSet)
+
+urlpatterns = router.urls

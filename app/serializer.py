@@ -23,10 +23,11 @@ class MemoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['memo_text', 'is_marked', 'memo_link', 'memo_image', 'tag_name', 'tag_color']
+        fields = ['memo_text', 'is_marked', 'memo_link', 'memo_image',
+                  'tag_name', 'tag_color', 'tag', 'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
-        return obj.tag_id.tag_name
+        return obj.tag.tag_name
 
     def get_tag_color(self, obj):
-        return obj.tag_id.tag_color
+        return obj.tag.tag_color
