@@ -1,11 +1,14 @@
 import json
 import requests
 
+from django.contrib.auth import authenticate
+
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from app.serializers import TokenSerializer
+from app.models import User
 
 
 class HelloView(APIView):
@@ -24,8 +27,8 @@ class HelloView(APIView):
 
 # /auth/kakao
 class KakaoLoginView(APIView):
-    @staticmethod
-    def post(request):
+    # 카카오 회원가입+로그인
+    def post(self, request):
         data = JSONParser().parse(request)
         kakao_access_token = data.get('kakao_access_token', None)
         kakao_auth_url = "https://kapi.kakao.com/v2/user/me"
@@ -36,13 +39,21 @@ class KakaoLoginView(APIView):
         kakao_response = requests.post(kakao_auth_url, headers=headers)
         kakao_response = json.loads(kakao_response.text)
 
-        # debug
-        print(kakao_response)
+        kakao_id = str(kakao_response.get('id', None))
+        kakao_account = kakao_response.get('kakao_account', None)
+        kakao_email = kakao_account.get('email', None)
+        nickname = kakao_account.get('profile', None).get('nickname', None)
 
-        # 유저 존재 -> 유저 토큰 가져옴
-        # 유저 존재 x -> 유저 DB에 생성 후 토큰 가져옴
+        user_data = {
+            "kakao_id": kakao_id,
+            "kakao_email": kakao_email,
+            "nickname": nickname,
+            "password": "1234"
+        }
 
-        serializer = TokenSerializer(data=kakao_response)
+        serializer = TokenSerializer(data=user_data)
         if serializer.is_valid():
             return Response(serializer.data, status=200)
+        else:
+            print(serializer.errors)
         return Response("Kakao Login False", status=400)
