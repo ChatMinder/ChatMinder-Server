@@ -31,3 +31,6 @@ class MemoSerializer(serializers.ModelSerializer):
 
     def get_tag_color(self, obj):
         return obj.tag.tag_color
+
+
+
