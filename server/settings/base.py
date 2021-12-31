@@ -62,6 +62,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'server.wsgi.application'
 
 AUTHENTICATION_BACKENDS = (
+    'app.backends.KakaoBackend',
     'django.contrib.auth.backends.ModelBackend',
 )
 
