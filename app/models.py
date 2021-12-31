@@ -40,16 +40,16 @@ class Tag(BaseModel):
 
     tag_name = models.CharField(max_length=20, null=False, blank=False)
     tag_color = models.CharField(max_length=2, choices=COLOR_IN_TAG_CHOICES)
-    user_id = models.ForeignKey('User', on_delete=models.CASCADE)
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'tag'
 
 
 class Memo(BaseModel):
-    memo_text = models.TextField(null=False)
+    memo_text = models.TextField(null=True)
     is_marked = models.BooleanField(default=False)
-    tag_id = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True)
+    tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True)
 
     class Meta:
         db_table = 'memo'
@@ -57,7 +57,7 @@ class Memo(BaseModel):
 
 class Link(BaseModel):
     url = models.URLField(null=False, blank=False)
-    memo_id = models.ForeignKey('Memo', on_delete=models.CASCADE)
+    memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'link'
@@ -65,7 +65,7 @@ class Link(BaseModel):
 
 class Image(BaseModel):
     image = models.ImageField(null=False, blank=False)
-    memo_id = models.ForeignKey('Memo', on_delete=models.CASCADE)
+    memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'image'
@@ -75,7 +75,7 @@ class Schedule(Model):
     start_date = models.DateTimeField(editable=True)
     end_date = models.DateTimeField(editable=True)
     is_repeated = models.BooleanField(default=False)
-    memo_id = models.ForeignKey('Memo', on_delete=models.CASCADE)
+    memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'schedule'
