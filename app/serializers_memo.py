@@ -33,4 +33,12 @@ class MemoSerializer(serializers.ModelSerializer):
         return obj.tag.tag_color
 
 
+class TagSerializer(serializers.ModelSerializer):
+    tag_memos = MemoSerializer(many=True, read_only=True, allow_null=True)
+
+    class Meta:
+        model = Tag
+        fields = ['tag_name', 'tag_color', 'user', 'tag_memos']
+
+
 

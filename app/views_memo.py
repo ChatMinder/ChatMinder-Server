@@ -5,6 +5,7 @@ from rest_framework.viewsets import ModelViewSet
 from app.models import Memo
 from app.serializers_memo import MemoSerializer
 
+
 class MemoFilter(FilterSet):
     memo_text = filters.CharFilter(field_name='memo_text', lookup_expr="icontains")
     is_marked = filters.BooleanFilter(field_name='is_marked')
