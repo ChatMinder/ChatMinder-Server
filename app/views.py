@@ -99,4 +99,5 @@ class MemoViewSet(ModelViewSet):
     queryset = Memo.objects.all().order_by('-created_at')
     serializer_class = MemoSerializer
     pagination_class = PageNumberPagination
-
+    filter_backends = [DjangoFilterBackend]
+    filter_class = MemoFilter
