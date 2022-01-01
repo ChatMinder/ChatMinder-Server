@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from django.contrib.auth import authenticate
 
-from app.models import User, Image, Link, Memo
+from app.models import User, Image, Link, Memo, Tag
 
 
 class TokenSerializer(TokenObtainPairSerializer):
@@ -63,7 +63,7 @@ class MemoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['memo_text', 'is_marked', 'memo_link', 'memo_image',
+        fields = ['id', 'memo_text', 'is_marked', 'memo_link', 'memo_image',
                   'tag_name', 'tag_color', 'tag', 'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
@@ -74,7 +74,7 @@ class MemoSerializer(serializers.ModelSerializer):
 
 
 class TagSerializer(serializers.ModelSerializer):
-    tag_memos = MemoSerializer(many=True, read_only=True, allow_null=True)
+    tag_memos = MemoSerializer(many=True, write_only=True, allow_null=True)
 
     class Meta:
         model = Tag

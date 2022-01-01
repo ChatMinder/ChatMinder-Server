@@ -47,9 +47,9 @@ class Tag(BaseModel):
 
 
 class Memo(BaseModel):
-    memo_text = models.TextField(null=True)
+    memo_text = models.TextField(null=True, blank=True)
     is_marked = models.BooleanField(default=False)
-    tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True)
+    tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         db_table = 'memo'
