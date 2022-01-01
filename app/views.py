@@ -1,16 +1,18 @@
 import json
 import requests
 
-from django.contrib.auth import authenticate
-
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from app.serializers import TokenSerializer
-from app.models import User
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.viewsets import ModelViewSet
+
+from app.serializers import TokenSerializer, MemoSerializer
+from app.models import User, Memo
 
 
+# /hello
 class HelloView(APIView):
     def get(self, request):
         return Response("GET Hello", status=200)
@@ -57,3 +59,10 @@ class KakaoLoginView(APIView):
         else:
             print(serializer.errors)
         return Response("Kakao Login False", status=400)
+
+
+# /memos
+class MemoViewSet(ModelViewSet):
+    queryset = Memo.objects.all().order_by('-created_at')
+    serializer_class = MemoSerializer
+    pagination_class = PageNumberPagination
