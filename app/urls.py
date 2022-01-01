@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework import routers
 from app.views import HelloView, KakaoLoginView
-from app.views_memo import MemoViewSet
+from app.views import MemoViewSet
 
 router = routers.DefaultRouter()
 router.register(r'memos', MemoViewSet)
