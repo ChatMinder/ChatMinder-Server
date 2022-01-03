@@ -48,27 +48,36 @@ class Tag(BaseModel):
 
 class Memo(BaseModel):
     memo_text = models.TextField(null=True, blank=True)
-    is_marked = models.BooleanField(default=False)
+    url = models.URLField(null=True, blank=True)
+    image = models.ImageField(null=True, blank=True)
     tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True)
+    is_tag_new = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'memo'
 
 
-class Link(BaseModel):
-    url = models.URLField(null=False, blank=False)
+class Bookmark(BaseModel):
     memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
+    is_marked = models.BooleanField(default=False)
 
     class Meta:
-        db_table = 'link'
+        db_table = 'bookmark'
 
-
-class Image(BaseModel):
-    image = models.ImageField(null=False, blank=False)
-    memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = 'image'
+# class Link(BaseModel):
+#     url = models.URLField(null=False, blank=False)
+#     memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
+#
+#     class Meta:
+#         db_table = 'link'
+#
+#
+# class Image(BaseModel):
+#     image = models.ImageField(null=False, blank=False)
+#     memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
+#
+#     class Meta:
+#         db_table = 'image'
 
 
 class Schedule(Model):
