@@ -81,42 +81,9 @@ class KakaoLoginView(APIView):
 
 
 # /memos
-class MemoList(APIView):
+class MemoViewSet(ModelViewSet):
+    queryset = Memo.objects.all().order_by('-created_at')
+    serializer_class = MemoSerializer
     pagination_class = PageNumberPagination
     filter_backends = [DjangoFilterBackend]
     filter_class = MemoFilter
-
-    def get(self, request):
-        memos = Memo.objects.all().order_by('-created_at')
-        serializer = MemoSerializer(memos, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        serializer = MemoSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class MemoDetail(APIView):
-    def get_memo(self, pk):
-        return get_object_or_404(Memo, pk=pk)
-
-    def get(self, request, pk):
-        memo = self.get_memo(pk=pk)
-        serializer = MemoSerializer(memo)
-        return Response(serializer)
-
-    def put(self, request, pk):
-        memo = self.get_memo(pk)
-        serializer = MemoSerializer(memo)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk):  # 특정 Post 삭제
-        memo = self.get_memo(pk)
-        memo.delete()
-        return Response("삭제 완료", status=status.HTTP_200_OK)

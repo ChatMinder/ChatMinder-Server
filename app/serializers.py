@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from django.contrib.auth import authenticate
 
-from app.models import User, Memo, Tag, Bookmark
+from app.models import User, Memo, Tag, Bookmark, Image, Link
 
 
 class TokenSerializer(TokenObtainPairSerializer):
@@ -43,16 +43,18 @@ class TokenSerializer(TokenObtainPairSerializer):
         return validated_data
 
 
-# class ImageSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Image
-#         fields = '__all__'
-#
-#
-# class LinkSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Link
-#         fields = '__all__'
+class ImageSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(use_url=True)
+
+    class Meta:
+        model = Image
+        fields = ['image']
+
+
+class LinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Link
+        fields = ['url']
 
 
 class BookmarkSerializer(serializers.ModelSerializer):
@@ -62,13 +64,19 @@ class BookmarkSerializer(serializers.ModelSerializer):
 
 
 class MemoSerializer(serializers.ModelSerializer):
-    memo_mark = BookmarkSerializer(write_only=True)
+    images = serializers.SerializerMethodField()
+    urls = LinkSerializer(many=True, read_only=True, allow_null=True)
+    memo_mark = BookmarkSerializer(read_only=True)
     tag_name = serializers.SerializerMethodField()
     tag_color = serializers.SerializerMethodField()
 
+    def get_images(self, obj):
+        image = obj.image_set.all()
+        return ImageSerializer(instance=image, many=True).data
+
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text',  'url', 'image','is_tag_new','memo_mark',
+        fields = ['id', 'memo_text', 'is_tag_new', 'memo_mark', 'images', 'urls',
                   'tag_name', 'tag_color', 'tag', 'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
@@ -76,6 +84,13 @@ class MemoSerializer(serializers.ModelSerializer):
 
     def get_tag_color(self, obj):
         return obj.tag.tag_color
+
+    def create(self, validated_data):
+        instance = Memo.objects.create(**validated_data)
+        images_data = self.context['request'].FILES
+        for images_data in images_data.getlist('image'):
+            Image.objects.create(memo=instance, image=images_data)
+        return instance
 
 
 class TagSerializer(serializers.ModelSerializer):
