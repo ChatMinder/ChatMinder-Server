@@ -12,3 +12,5 @@ PyJWT==2.1.0
 djangorestframework-simplejwt==4.8.0
 django-cors-headers
 requests==2.26.0
+django-storages==1.12.3
+boto3==1.20.26

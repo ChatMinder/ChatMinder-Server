@@ -17,6 +17,7 @@ class BaseModel(Model):
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     kakao_id = models.CharField(max_length=20, unique=True, null=False, blank=False)
     kakao_email = models.EmailField(unique=True, null=False, blank=False)
+    password = models.CharField(max_length=20, null=True, blank=True, default="")
     is_superuser = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     nickname = models.CharField(max_length=20, null=False, blank=False, default="anonymous")
@@ -64,7 +65,8 @@ class Link(BaseModel):
 
 
 class Image(BaseModel):
-    image = models.ImageField(null=False, blank=False)
+    url = models.URLField(null=False, blank=False, default="url")
+    name = models.CharField(null=False, blank=False, max_length=40, default="anonymous")
     memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
 
     class Meta:
