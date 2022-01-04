@@ -9,11 +9,14 @@ from app.models import User, Memo, Tag, Bookmark, Image
 class TokenSerializer(TokenObtainPairSerializer):
     kakao_email = serializers.EmailField(write_only=True, required=False)
     nickname = serializers.CharField(write_only=True, required=False)
-    password = serializers.CharField(write_only=True, required=False)
     kakao_id = serializers.CharField()
 
     access = serializers.CharField(read_only=True)
     refresh = serializers.CharField(read_only=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['password'].required = False
 
     @classmethod
     def get_token(cls, user):
@@ -22,20 +25,19 @@ class TokenSerializer(TokenObtainPairSerializer):
         token['kakao_email'] = user.kakao_email
         return token
 
-    def validate(self, data):
+    def validate(self, attrs):
+        attrs.update({'password': ''})
         user, created = User.objects.get_or_create(
-            kakao_id=data.get('kakao_id', None),
-            kakao_email=data.get('kakao_email', None)
+            kakao_id=attrs.get('kakao_id', None),
+            kakao_email=attrs.get('kakao_email', None)
         )
-        if created:
-            user.set_password(None)
-        user.nickname = data.get('nickname', None)
+        user.nickname = attrs.get('nickname', None)
         user.is_active = True
         user.save()
 
         authenticate(username=user.USERNAME_FIELD)
 
-        validated_data = super().validate(data)
+        validated_data = super().validate(attrs)
         refresh = self.get_token(user)
         validated_data["refresh"] = str(refresh)
         validated_data["access"] = str(refresh.access_token)
@@ -104,3 +106,13 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ['tag_name', 'tag_color', 'user', 'tag_memos']
+
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'kakao_id', 'kakao_email', 'nickname',
+                  'is_active', 'is_superuser', 'created_at', 'updated_at',
+                  'last_login', 'created_at']
+
