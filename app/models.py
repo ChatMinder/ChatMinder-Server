@@ -48,7 +48,7 @@ class Tag(BaseModel):
 
 class Memo(BaseModel):
     memo_text = models.TextField(null=True, blank=True)
-    # url = models.URLField(null=True, blank=True)
+    url = models.URLField(null=True, blank=True)
     # image = models.ImageField(null=True, blank=True)
     tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True)
     is_tag_new = models.BooleanField(default=False)
@@ -67,7 +67,7 @@ class Bookmark(BaseModel):
 
 class Link(BaseModel):
     url = models.URLField(blank=True, null=True)
-    memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
+    memo = models.ForeignKey('Memo', on_delete=models.CASCADE, related_name='links')
 
     class Meta:
         db_table = 'link'

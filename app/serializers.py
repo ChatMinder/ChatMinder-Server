@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from django.contrib.auth import authenticate
 
-from app.models import User, Memo, Tag, Bookmark, Image, Link
+from app.models import User, Memo, Tag, Bookmark, Image
 
 
 class TokenSerializer(TokenObtainPairSerializer):
@@ -51,10 +51,12 @@ class ImageSerializer(serializers.ModelSerializer):
         fields = ['image']
 
 
-class LinkSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Link
-        fields = ['url']
+# class LinkSerializer(serializers.ModelSerializer):
+#     url = serializers.URLField
+#
+#     class Meta:
+#         model = Link
+#         fields = ['url']
 
 
 class BookmarkSerializer(serializers.ModelSerializer):
@@ -65,18 +67,19 @@ class BookmarkSerializer(serializers.ModelSerializer):
 
 class MemoSerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField()
-    urls = LinkSerializer(many=True, read_only=True, allow_null=True)
+    #urls = LinkSerializer(many=True, write_only=True)
     memo_mark = BookmarkSerializer(read_only=True)
     tag_name = serializers.SerializerMethodField()
     tag_color = serializers.SerializerMethodField()
+    links = serializers.HyperlinkedRelatedField(many=True, read_only=True, view_name='link_detail')
 
     def get_images(self, obj):
         image = obj.image_set.all()
-        return ImageSerializer(instance=image, many=True).data
+        return ImageSerializer(instance=image, many=True, context=self.context).data
 
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text', 'is_tag_new', 'memo_mark', 'images', 'urls',
+        fields = ['id', 'memo_text', 'is_tag_new', 'memo_mark', 'images', 'links',
                   'tag_name', 'tag_color', 'tag', 'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
@@ -86,10 +89,11 @@ class MemoSerializer(serializers.ModelSerializer):
         return obj.tag.tag_color
 
     def create(self, validated_data):
-        instance = Memo.objects.create(**validated_data)
         images_data = self.context['request'].FILES
-        for images_data in images_data.getlist('image'):
-            Image.objects.create(memo=instance, image=images_data)
+        instance = Memo.objects.create(**validated_data)
+        if images_data is not None:
+            for images_data in images_data.getlist('image'):
+                Image.objects.create(memo=instance, image=images_data)
         return instance
 
 

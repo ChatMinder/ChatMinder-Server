@@ -17,19 +17,19 @@ from app.models import User, Memo
 
 class MemoFilter(FilterSet):
     memo_text = filters.CharFilter(field_name='memo_text', lookup_expr="icontains")
-    is_text_null = filters.BooleanFilter(field_name='memo_text', method='is_text_null') #텍스트 모아보기
+    text_null = filters.BooleanFilter(field_name='memo_text', method='is_text_null') #텍스트 모아보기
+    url_null = filters.BooleanFilter(field_name='url', method='is_url_null')
+    image_null = filters.BooleanFilter(field_name='image', method='is_image_null')
 
     class Meta:
         model = Memo
-        fields = ['memo_text']
+        fields = ['memo_text', 'url', 'image']
 
     def is_text_null(self, queryset, text, value):
         if value:
             return queryset.filter(text__isnull=True)
         else:
             return queryset.filter(text__isnull=False)
-
-
 
 # /hello
 class HelloView(APIView):
