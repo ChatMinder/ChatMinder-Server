@@ -68,7 +68,6 @@ class BookmarkSerializer(serializers.ModelSerializer):
 class MemoSerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField(allow_null=True)
     #urls = LinkSerializer(many=True, write_only=True)
-    memo_mark = BookmarkSerializer(read_only=True)
     tag_name = serializers.SerializerMethodField()
     tag_color = serializers.SerializerMethodField()
     #links = serializers.HyperlinkedRelatedField(many=True, read_only=True, view_name='link_detail', allow_null=True)
@@ -79,22 +78,24 @@ class MemoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text', 'is_tag_new', 'memo_mark', 'images', 'url',
-                  'tag_name', 'tag_color', 'tag', 'created_at', 'updated_at']
+        fields = ['id', 'memo_text', 'is_tag_new', 'url', 'tag_name', 'images',
+                  'tag_color', 'tag', 'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
-        return obj.tag.tag_name
+        if obj.tag:
+            return obj.tag.tag_name
 
     def get_tag_color(self, obj):
-        return obj.tag.tag_color
+        if obj.tag:
+            return obj.tag.tag_color
 
-    def create(self, validated_data):
-        images_data = self.context['request'].FILES
-        instance = Memo.objects.create(**validated_data)
-        if images_data is not None:
-            for images_data in images_data.getlist('image'):
-                Image.objects.create(memo=instance, image=images_data)
-        return instance
+    # def create(self, validated_data):
+    #     instance = Memo.objects.create(**validated_data)
+    #     images_data = self.context['request'].FILES
+    #     if images_data is not None:
+    #         for images_data in images_data.getlist('image'):
+    #             Image.objects.create(memo=instance, image=images_data)
+    #     return instance
 
 
 class TagSerializer(serializers.ModelSerializer):

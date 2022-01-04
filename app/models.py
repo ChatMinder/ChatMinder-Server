@@ -38,8 +38,8 @@ class Tag(BaseModel):
         # 더 추가해야됨!
     ]
 
-    tag_name = models.CharField(max_length=20, null=False, blank=False)
-    tag_color = models.CharField(max_length=2, choices=COLOR_IN_TAG_CHOICES)
+    tag_name = models.CharField(max_length=20, null=True, blank=True)
+    tag_color = models.CharField(max_length=2, choices=COLOR_IN_TAG_CHOICES, null=True, blank=True)
     user = models.ForeignKey('User', on_delete=models.CASCADE)
 
     class Meta:
