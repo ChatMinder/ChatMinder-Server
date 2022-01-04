@@ -39,8 +39,8 @@ class Tag(BaseModel):
         # 더 추가해야됨!
     ]
 
-    tag_name = models.CharField(max_length=20, null=False, blank=False)
-    tag_color = models.CharField(max_length=2, choices=COLOR_IN_TAG_CHOICES)
+    tag_name = models.CharField(max_length=20, null=True, blank=True)
+    tag_color = models.CharField(max_length=2, choices=COLOR_IN_TAG_CHOICES, null=True, blank=True)
     user = models.ForeignKey('User', on_delete=models.CASCADE)
 
     class Meta:
@@ -48,23 +48,34 @@ class Tag(BaseModel):
 
 
 class Memo(BaseModel):
-    memo_text = models.TextField(null=True)
-    is_marked = models.BooleanField(default=False)
-    tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True)
+    memo_text = models.TextField(null=True, blank=True)
+    url = models.URLField(null=True, blank=True)
+    # image = models.ImageField(null=True, blank=True)
+    tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True)
+    is_tag_new = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'memo'
 
 
-class Link(BaseModel):
-    url = models.URLField(null=False, blank=False)
+class Bookmark(BaseModel):
     memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
+    is_marked = models.BooleanField(default=False)
 
     class Meta:
-        db_table = 'link'
+        db_table = 'bookmark'
+
+
+# class Link(BaseModel):
+#     url = models.URLField(blank=True, null=True)
+#     memo = models.ForeignKey('Memo', on_delete=models.CASCADE, related_name='links')
+#
+#     class Meta:
+#         db_table = 'link'
 
 
 class Image(BaseModel):
+    #image = models.ImageField(upload_to="%Y/%m/%d", blank=True, null=True)
     url = models.URLField(null=False, blank=False, default="url")
     name = models.CharField(null=False, blank=False, max_length=40, default="anonymous")
     memo = models.ForeignKey('Memo', on_delete=models.CASCADE)

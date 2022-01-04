@@ -1,5 +1,8 @@
 import json
 import requests
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet, filters
+from rest_framework import status
 import string
 import random
 
@@ -10,11 +13,48 @@ from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet
 
+
+from app.pagination import PaginationHandlerMixin
 from app.serializers import TokenSerializer, MemoSerializer, UserSerializer, ImageSerializer
-from app.models import User, Memo
+from app.models import User, Memo, Tag
 from app.storages import get_s3_connection
 
 from server.settings.base import env
+
+
+class BasicPagination(PageNumberPagination):
+    page_size_query_param = 'limit'
+
+class MemoFilter(FilterSet):
+    memo_text = filters.CharFilter(field_name='memo_text', lookup_expr="icontains")
+    text_null = filters.BooleanFilter(field_name='memo_text', method='is_text_null') #텍스트 모아보기
+    # link_null = filters.BooleanFilter(field_name='link', method='is_link_null') #링크 모아보기
+    # images_null = filters.BooleanFilter(field_name='images', method='is_image_null')
+
+    class Meta:
+        model = Memo
+        fields = ['memo_text', 'url', 'image']
+
+    def is_text_null(self, queryset, text, value):
+        if value:
+            return queryset.filter(memo_text__isnull=True)
+        else:
+            return queryset.filter(memo_text__isnull=False)
+
+    # def is_link_null(self, queryset, link, value):
+    #     if value:
+    #         return queryset.filter(links__isnull=True)
+    #     else:
+    #         return queryset.filter(link__isnull=False)
+    #
+    # def is_image_null(self, queryset, image, value):
+    #     if value:
+    #         return queryset.filter(images__isnull=True)
+    #     else:
+    #         return queryset.filter(images__isnull=False)
+
+
+
 
 def get_random_hash(length):
     string_pool = string.ascii_letters + string.digits
@@ -115,8 +155,59 @@ class ImagesView(APIView):
         return Response(serializer.errors, status=400)
 
 
-# /memos
-class MemoViewSet(ModelViewSet):
-    queryset = Memo.objects.all().order_by('-created_at')
-    serializer_class = MemoSerializer
-    pagination_class = PageNumberPagination
+
+class MemoList(APIView, PaginationHandlerMixin):
+
+    pagination_class = BasicPagination
+    filter_backends = [DjangoFilterBackend]
+    filter_class = MemoFilter
+
+    def get(self, request, *args, **kwargs):
+        memos = Memo.objects.all().order_by('-created_at')
+        page = self.paginate_queryset(memos)
+        if page is not None:
+            serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
+        else:
+            serializer = MemoSerializer(memos, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        if request.user.is_anonymous:
+            return Response("알 수 없는 유저입니다.", status=404)
+        serializer = MemoSerializer(data=request.data)
+        if serializer.is_valid():
+            if request.data['is_tag_new'] is not None:
+                tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_name'], user=user)
+                memo = Memo.objects.create(memo_text=request.data['tag_name'], url=request.data['url'], tag=tag)
+                serializer.create(memo)
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MemoDetial(APIView):
+    def get_memos(self, pk):
+        return get_object_or_404(Memo, pk=pk)
+
+    def get(self, request, pk):
+        memos = self.get_memos(pk=pk)
+        serializer = MemoSerializer(memos)
+        return Response(serializer)
+
+    def put(self, request, pk):
+        memos = self.get_memos(pk)
+        serializer = MemoSerializer(memos)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):  # 특정 Post 삭제
+        memos = self.get_memos(pk)
+        memos.delete()
+        return Response("삭제 완료", status=status.HTTP_200_OK)
+
