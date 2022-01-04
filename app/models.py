@@ -65,12 +65,12 @@ class Bookmark(BaseModel):
         db_table = 'bookmark'
 
 
-class Link(BaseModel):
-    url = models.URLField(blank=True, null=True)
-    memo = models.ForeignKey('Memo', on_delete=models.CASCADE, related_name='links')
-
-    class Meta:
-        db_table = 'link'
+# class Link(BaseModel):
+#     url = models.URLField(blank=True, null=True)
+#     memo = models.ForeignKey('Memo', on_delete=models.CASCADE, related_name='links')
+#
+#     class Meta:
+#         db_table = 'link'
 
 
 class Image(BaseModel):

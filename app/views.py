@@ -18,8 +18,8 @@ from app.models import User, Memo
 class MemoFilter(FilterSet):
     memo_text = filters.CharFilter(field_name='memo_text', lookup_expr="icontains")
     text_null = filters.BooleanFilter(field_name='memo_text', method='is_text_null') #텍스트 모아보기
-    url_null = filters.BooleanFilter(field_name='url', method='is_url_null')
-    image_null = filters.BooleanFilter(field_name='image', method='is_image_null')
+    # link_null = filters.BooleanFilter(field_name='link', method='is_link_null') #링크 모아보기
+    # images_null = filters.BooleanFilter(field_name='images', method='is_image_null')
 
     class Meta:
         model = Memo
@@ -27,9 +27,23 @@ class MemoFilter(FilterSet):
 
     def is_text_null(self, queryset, text, value):
         if value:
-            return queryset.filter(text__isnull=True)
+            return queryset.filter(memo_text__isnull=True)
         else:
-            return queryset.filter(text__isnull=False)
+            return queryset.filter(memo_text__isnull=False)
+
+    # def is_link_null(self, queryset, link, value):
+    #     if value:
+    #         return queryset.filter(links__isnull=True)
+    #     else:
+    #         return queryset.filter(link__isnull=False)
+    #
+    # def is_image_null(self, queryset, image, value):
+    #     if value:
+    #         return queryset.filter(images__isnull=True)
+    #     else:
+    #         return queryset.filter(images__isnull=False)
+
+
 
 # /hello
 class HelloView(APIView):

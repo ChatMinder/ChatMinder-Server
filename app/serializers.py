@@ -66,12 +66,12 @@ class BookmarkSerializer(serializers.ModelSerializer):
 
 
 class MemoSerializer(serializers.ModelSerializer):
-    images = serializers.SerializerMethodField()
+    images = serializers.SerializerMethodField(allow_null=True)
     #urls = LinkSerializer(many=True, write_only=True)
     memo_mark = BookmarkSerializer(read_only=True)
     tag_name = serializers.SerializerMethodField()
     tag_color = serializers.SerializerMethodField()
-    links = serializers.HyperlinkedRelatedField(many=True, read_only=True, view_name='link_detail')
+    #links = serializers.HyperlinkedRelatedField(many=True, read_only=True, view_name='link_detail', allow_null=True)
 
     def get_images(self, obj):
         image = obj.image_set.all()
@@ -79,7 +79,7 @@ class MemoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text', 'is_tag_new', 'memo_mark', 'images', 'links',
+        fields = ['id', 'memo_text', 'is_tag_new', 'memo_mark', 'images', 'url',
                   'tag_name', 'tag_color', 'tag', 'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
