@@ -65,7 +65,8 @@ class Link(BaseModel):
 
 
 class Image(BaseModel):
-    image = models.ImageField(null=False, blank=False)
+    url = models.URLField(null=False, blank=False, default="url")
+    name = models.CharField(null=False, blank=False, max_length=40, default="anonymous")
     memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
 
     class Meta:
