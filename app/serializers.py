@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from django.contrib.auth import authenticate
 
-from app.models import User, Memo, Tag, Bookmark, Image
+from app.models import User, Memo, Tag, Image, Link
 
 
 class TokenSerializer(TokenObtainPairSerializer):
@@ -51,17 +51,9 @@ class ImageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# class LinkSerializer(serializers.ModelSerializer):
-#     url = serializers.URLField
-#
-#     class Meta:
-#         model = Link
-#         fields = ['url']
-
-
-class BookmarkSerializer(serializers.ModelSerializer):
+class LinkSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Bookmark
+        model = Link
         fields = '__all__'
 
 
@@ -70,7 +62,6 @@ class MemoSerializer(serializers.ModelSerializer):
     #urls = LinkSerializer(many=True, write_only=True)
     tag_name = serializers.SerializerMethodField()
     tag_color = serializers.SerializerMethodField()
-    #links = serializers.HyperlinkedRelatedField(many=True, read_only=True, view_name='link_detail', allow_null=True)
 
     def get_images(self, obj):
         image = obj.image_set.all()
@@ -78,7 +69,7 @@ class MemoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text', 'is_tag_new', 'url', 'tag_name', 'images',
+        fields = ['id', 'memo_text', 'is_tag_new', 'url', 'tag_name', 'images', 'is_marked',
                   'tag_color', 'tag', 'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
