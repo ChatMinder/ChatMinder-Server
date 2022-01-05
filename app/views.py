@@ -141,6 +141,28 @@ class ImagesView(APIView):
         return Response(serializer.errors, status=400)
 
 
+class BookmarkView(APIView, PaginationHandlerMixin):
+    pagination_class = BasicPagination
+
+    def get_memos(self, pk):
+        return get_object_or_404(Memo, pk=pk)
+
+    def post(self, request):
+        memo = self.get_memos(pk=request.data['memo'])
+        if request.data['is_marked']:
+            memo.is_marked = True
+        else:
+            memo.is_marked = False
+        memo.save()
+        memos = Memo.objects.all().order_by('-created_at')
+        page = self.paginate_queryset(memos)
+        if page is not None:
+            serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
+        else:
+            serializer = MemoSerializer(memos, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+
+
 class MemoList(APIView, PaginationHandlerMixin):
     pagination_class = BasicPagination
 
@@ -155,7 +177,6 @@ class MemoList(APIView, PaginationHandlerMixin):
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        print(user)
         if request.user.is_anonymous:
             return JsonResponse("알 수 없는 유저입니다.", status=404)
         serializer = MemoSerializer(data=request.data)
@@ -228,6 +249,10 @@ class MemoLink(ModelViewSet):#링크모아보기
         queryset = Memo.objects.filter(url__isnull=False).order_by('-created_at')
         serializer = self.get_serializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK)
+
+
+
+
 
 
 
