@@ -88,6 +88,19 @@ class UserView(APIView):
         serializer = UserSerializer(request.user)
         return Response(serializer.data, status=200)
 
+    # for debug
+    def post(self, request):
+        data = JSONParser().parse(request)
+        user_data = {
+            "kakao_id": data.get('kakao_id', None),
+            "kakao_email": data.get('kakao_email', None),
+            "nickname": data.get('nickname', None)
+        }
+        serializer = TokenSerializer(data=user_data)
+        if serializer.is_valid():
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=400)
+
 
 # /auth/kakao
 class KakaoLoginView(APIView):
@@ -142,6 +155,7 @@ class ImagesView(APIView):
         }
         serializer = ImageSerializer(data=image_data)
         if serializer.is_valid():
+            serializer.save()
             s3 = get_s3_connection()
             s3.upload_fileobj(
                 image,
