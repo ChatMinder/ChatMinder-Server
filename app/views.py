@@ -192,8 +192,10 @@ class MemoList(APIView, PaginationHandlerMixin):
         serializer = MemoSerializer(data=request.data)
         if serializer.is_valid():
             if request.data['is_tag_new'] is not None:
-                tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_name'], user=user)
-                memo = Memo.objects.create(memo_text=request.data['tag_name'], url=request.data['url'], tag=tag)
+                tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
+                print(tag)
+                memo = Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag)
+                print(memo)
                 serializer.create(memo)
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
