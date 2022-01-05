@@ -28,8 +28,8 @@ class BasicPagination(PageNumberPagination):
 class MemoFilter(FilterSet):
     memo_text = filters.CharFilter(field_name='memo_text', lookup_expr="icontains")
     text_null = filters.BooleanFilter(field_name='memo_text', method='is_text_null') #텍스트 모아보기
-    # link_null = filters.BooleanFilter(field_name='link', method='is_link_null') #링크 모아보기
-    # images_null = filters.BooleanFilter(field_name='images', method='is_image_null')
+    link_null = filters.BooleanFilter(field_name='link', method='is_link_null') #링크 모아보기
+    images_null = filters.BooleanFilter(field_name='images', method='is_image_null') #이미지 모아보기
 
     class Meta:
         model = Memo
@@ -41,17 +41,17 @@ class MemoFilter(FilterSet):
         else:
             return queryset.filter(memo_text__isnull=False)
 
-    # def is_link_null(self, queryset, link, value):
-    #     if value:
-    #         return queryset.filter(links__isnull=True)
-    #     else:
-    #         return queryset.filter(link__isnull=False)
-    #
-    # def is_image_null(self, queryset, image, value):
-    #     if value:
-    #         return queryset.filter(images__isnull=True)
-    #     else:
-    #         return queryset.filter(images__isnull=False)
+    def is_link_null(self, queryset, link, value):
+        if value:
+            return queryset.filter(links__isnull=True)
+        else:
+            return queryset.filter(link__isnull=False)
+
+    def is_image_null(self, queryset, image, value):
+        if value:
+            return queryset.filter(images__isnull=True)
+        else:
+            return queryset.filter(images__isnull=False)
 
 
 
@@ -190,9 +190,9 @@ class MemoList(APIView, PaginationHandlerMixin):
             return Response("알 수 없는 유저입니다.", status=404)
         serializer = MemoSerializer(data=request.data)
         if serializer.is_valid():
-            if request.data['is_tag_new'] is not None:
+            if request.data['is_tag_new']:
                 tag = Tag.objects.get(tag_name=request.data['tag_name'])
-                if tag is None:#tagname 중복값이 있다면 저장안함
+                if tag is None:#DB에 중복값이 있다면 저장안함
                     Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
                 Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag)
                 memos = Memo.objects.all().order_by('-created_at')
@@ -204,7 +204,13 @@ class MemoList(APIView, PaginationHandlerMixin):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                memos = Memo.objects.all().order_by('-created_at')
+                page = self.paginate_queryset(memos)
+                if page is not None:
+                    serializer1 = self.get_paginated_response(MemoSerializer(page, many=True).data)
+                else:
+                    serializer1 = MemoSerializer(memos, many=True)
+                return Response(serializer1.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
