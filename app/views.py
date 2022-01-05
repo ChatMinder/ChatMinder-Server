@@ -37,9 +37,9 @@ class MemoFilter(FilterSet):
 
     def is_text_null(self, queryset, text, value):
         if value:
-            return queryset.filter(memo_text__isnull=True)
+            return queryset.filter(text__isnull=True)
         else:
-            return queryset.filter(memo_text__isnull=False)
+            return queryset.filter(text__isnull=False)
 
     def is_link_null(self, queryset, link, value):
         if value:
@@ -235,4 +235,28 @@ class MemoDetial(APIView):
         memos = self.get_memos(pk)
         memos.delete()
         return Response("삭제 완료", status=status.HTTP_200_OK)
+
+
+class MemoText(ModelViewSet):
+    queryset = Memo.objects.all()
+    serializer_class = MemoSerializer
+    pagination_class = PageNumberPagination
+
+    def list(self, request, *args, **kwargs):
+        queryset = Memo.objects.filter(memo_text__isnull=False).order_by('-created_at')
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MemoLink(ModelViewSet):#링크모아보기
+    queryset = Memo.objects.all()
+    serializer_class = MemoSerializer
+    pagination_class = PageNumberPagination
+
+    def list(self, request, *args, **kwargs):
+        queryset = Memo.objects.filter(url__isnull=False).order_by('-created_at')
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 
