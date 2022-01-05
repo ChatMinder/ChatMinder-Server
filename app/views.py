@@ -16,7 +16,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from app.pagination import PaginationHandlerMixin
 from app.serializers import TokenSerializer, MemoSerializer, UserSerializer, ImageSerializer
-from app.models import User, Memo, Tag
+from app.models import User, Memo, Tag, Image
 from app.storages import get_s3_connection
 
 from server.settings.base import env
@@ -135,6 +135,11 @@ class KakaoLoginView(APIView):
         return Response("Kakao Login False", status=400)
 
 
+# class LinkView(APIView):
+#     def post(self, request):
+#
+
+
 # /images
 class ImagesView(APIView):
     def post(self, request):
@@ -172,8 +177,6 @@ class ImagesView(APIView):
 
 class MemoList(APIView, PaginationHandlerMixin):
     pagination_class = BasicPagination
-    filter_backends = [DjangoFilterBackend]
-    filter_class = MemoFilter
 
     def get(self, request, *args, **kwargs):
         memos = Memo.objects.all().order_by('-created_at')
@@ -186,14 +189,16 @@ class MemoList(APIView, PaginationHandlerMixin):
 
     def post(self, request, *args, **kwargs):
         user = request.user
+        print(user)
         if request.user.is_anonymous:
             return Response("알 수 없는 유저입니다.", status=404)
         serializer = MemoSerializer(data=request.data)
         if serializer.is_valid():
             if request.data['is_tag_new']:
-                tag = Tag.objects.get(tag_name=request.data['tag_name'])
-                if tag is None:#DB에 중복값이 있다면 저장안함
-                    Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
+                try: #DB에 중복값이 있다면 저장안함
+                    tag = Tag.objects.get(tag_name=request.data['tag_name'])
+                except Tag.DoesNotExist:
+                    tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
                 Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag)
                 memos = Memo.objects.all().order_by('-created_at')
                 page = self.paginate_queryset(memos)
