@@ -76,7 +76,7 @@ class Bookmark(BaseModel):
 
 class Image(BaseModel):
     #image = models.ImageField(upload_to="%Y/%m/%d", blank=True, null=True)
-    url = models.URLField(null=False, blank=False, default="url")
+    url = models.CharField(null=False, blank=False, default="url", max_length=50)
     name = models.CharField(null=False, blank=False, max_length=40, default="anonymous")
     memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
 

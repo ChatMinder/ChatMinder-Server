@@ -46,11 +46,9 @@ class TokenSerializer(TokenObtainPairSerializer):
 
 
 class ImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(use_url=True)
-
     class Meta:
         model = Image
-        fields = ['image']
+        fields = '__all__'
 
 
 # class LinkSerializer(serializers.ModelSerializer):

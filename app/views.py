@@ -142,12 +142,13 @@ class ImagesView(APIView):
             return Response("알 수 없는 유저입니다.", status=404)
         user_kakao_id = request.user.kakao_id
         image = request.FILES['image']
+        splited_name = image.name.split('.')
+        extension = "." + splited_name[len(splited_name)-1]
         memo_id = request.data['memo_id']
 
         hash_value = get_random_hash(length=30)
-        directory = user_kakao_id + "/" + hash_value
-        resource_url = "http://" + env('AWS_CLOUDFRONT_DOMAIN') + directory
-        file_name = hash_value
+        resource_url = user_kakao_id + "/" + hash_value + extension
+        file_name = hash_value + extension
         image_data = {
             "memo": memo_id,
             "url": resource_url,
@@ -160,14 +161,13 @@ class ImagesView(APIView):
             s3.upload_fileobj(
                 image,
                 env('S3_BUCKET_NAME'),
-                directory,
+                resource_url,
                 ExtraArgs={
                     "ContentType": image.content_type,
                 }
             )
             return Response(serializer.data, status=200)
         return Response(serializer.errors, status=400)
-
 
 
 class MemoList(APIView, PaginationHandlerMixin):
