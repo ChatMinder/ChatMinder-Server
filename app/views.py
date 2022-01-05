@@ -177,6 +177,7 @@ class MemoList(APIView, PaginationHandlerMixin):
 
     def post(self, request, *args, **kwargs):
         user = request.user
+        print(user)
         if request.user.is_anonymous:
             return JsonResponse("알 수 없는 유저입니다.", status=404)
         serializer = MemoSerializer(data=request.data)
@@ -251,8 +252,11 @@ class MemoLink(ModelViewSet):#링크모아보기
         return JsonResponse(serializer.data, status=status.HTTP_200_OK)
 
 
+<<<<<<< HEAD
 
 
 
 
+=======
+>>>>>>> 251fb2f0c9f21d4d82c981aa99e63a14f6ebdbda
 
