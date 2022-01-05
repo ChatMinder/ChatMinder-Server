@@ -171,7 +171,6 @@ class ImagesView(APIView):
 
 
 class MemoList(APIView, PaginationHandlerMixin):
-
     pagination_class = BasicPagination
     filter_backends = [DjangoFilterBackend]
     filter_class = MemoFilter
@@ -192,12 +191,16 @@ class MemoList(APIView, PaginationHandlerMixin):
         serializer = MemoSerializer(data=request.data)
         if serializer.is_valid():
             if request.data['is_tag_new'] is not None:
-                tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
-                print(tag)
-                memo = Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag)
-                print(memo)
-                serializer.create(memo)
-                serializer.save()
+                tag = Tag.objects.get(tag_name=request.data['tag_name'])
+                if tag is None:#tagname 중복값이 있다면 저장안함
+                    Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
+                Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag)
+                memos = Memo.objects.all().order_by('-created_at')
+                page = self.paginate_queryset(memos)
+                if page is not None:
+                    serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
+                else:
+                    serializer = MemoSerializer(memos, many=True)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 serializer.save()
