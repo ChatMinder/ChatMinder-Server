@@ -252,11 +252,4 @@ class MemoLink(ModelViewSet):#링크모아보기
         return JsonResponse(serializer.data, status=status.HTTP_200_OK)
 
 
-<<<<<<< HEAD
-
-
-
-
-=======
->>>>>>> 251fb2f0c9f21d4d82c981aa99e63a14f6ebdbda
 

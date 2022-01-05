@@ -2,11 +2,9 @@ from django.conf.urls.static import static
 from django.urls import include, path
 from rest_framework import routers
 
-<<<<<<< HEAD
+
 from app.views import HelloView, KakaoLoginView, ImagesView, UserView, MemoText, MemoLink, BookmarkView
-=======
-from app.views import HelloView, KakaoLoginView, ImagesView, UserView, MemoText, MemoLink
->>>>>>> 251fb2f0c9f21d4d82c981aa99e63a14f6ebdbda
+
 from app.views import MemoList, MemoDetial
 from server.settings import base
 
