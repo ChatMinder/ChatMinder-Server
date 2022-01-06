@@ -51,24 +51,15 @@ class Memo(BaseModel):
     memo_text = models.TextField(null=True, blank=True)
     url = models.URLField(null=True, blank=True)
     is_marked = models.BooleanField(default=False)
-    # image = models.ImageField(null=True, blank=True)
-    tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True)
     is_tag_new = models.BooleanField(default=False)
+    tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True, related_name='memo_tag')
+    user = models.ForeignKey('User', on_delete=models.CASCADE,  null=True, related_name='memo_user')
 
     class Meta:
         db_table = 'memo'
 
 
-class Link(BaseModel):
-    url = models.URLField(blank=True, null=True)
-    memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = 'link'
-
-
 class Image(BaseModel):
-    #image = models.ImageField(upload_to="%Y/%m/%d", blank=True, null=True)
     url = models.CharField(null=False, blank=False, default="url", max_length=50)
     name = models.CharField(null=False, blank=False, max_length=40, default="anonymous")
     memo = models.ForeignKey('Memo', on_delete=models.CASCADE)
