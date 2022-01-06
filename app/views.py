@@ -190,7 +190,7 @@ class MemoList(APIView, PaginationHandlerMixin):
                     tag = Tag.objects.get(tag_name=request.data['tag_name'])
                 except Tag.DoesNotExist:
                     tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
-                Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag)
+                Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag, user=user)
                 memos = Memo.objects.filter(user=user).order_by('-created_at')
                 page = self.paginate_queryset(memos)
                 if page is not None:
