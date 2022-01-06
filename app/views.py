@@ -1,4 +1,6 @@
 import json
+from itertools import chain
+
 import requests
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
