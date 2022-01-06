@@ -7,6 +7,7 @@ from rest_framework import status
 import string
 import random
 
+from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,10 +22,6 @@ from app.models import User, Memo, Tag, Image
 from app.storages import get_s3_connection
 
 from server.settings.base import env
-
-
-# class BasicPagination(PageNumberPagination):
-#     page_size_query_param = 'limit'
 
 
 def get_random_hash(length):
@@ -171,7 +168,7 @@ class MemoList(APIView, PaginationHandlerMixin):
     def get(self, request, *args, **kwargs):
         user = request.user
         if request.user.is_anonymous:
-            return JsonResponse("알 수 없는 유저입니다.", status=404, safe=False)
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         memos = Memo.objects.filter(user=user).order_by('-created_at')
         page = self.paginate_queryset(memos)
         if page is not None:
@@ -183,7 +180,7 @@ class MemoList(APIView, PaginationHandlerMixin):
     def post(self, request, *args, **kwargs):
         user = request.user
         if request.user.is_anonymous:
-            return JsonResponse("알 수 없는 유저입니다.", status=404)
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         serializer = MemoSerializer(data=request.data)
         if serializer.is_valid():
             if request.data['is_tag_new']:
@@ -221,7 +218,7 @@ class MemoDetial(APIView):
         serializer = MemoSerializer(memos)
         return JsonResponse(serializer)
 
-    def put(self, request, pk):
+    def patch(self, request, pk):
         memos = self.get_memos(pk)
         serializer = MemoSerializer(memos)
         if serializer.is_valid():
@@ -235,15 +232,16 @@ class MemoDetial(APIView):
         return JsonResponse("삭제 완료", status=status.HTTP_200_OK)
 
 
-class MemoText(ModelViewSet):
+class MemoFilterViewSet(ModelViewSet):
     queryset = Memo.objects.all()
     serializer_class = MemoSerializer
     pagination_class = PageNumberPagination
 
-    def list(self, request, *args, **kwargs):
+    @action(detail=False)
+    def texts(self, request, *args, **kwargs):
         user = request.user
         if request.user.is_anonymous:
-            return JsonResponse("알 수 없는 유저입니다.", status=404)
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         queryset = Memo.objects.filter(memo_text__isnull=False, user=user).order_by('-created_at')
         self.paginator.page_size_query_param = "page_size"
         page = self.paginate_queryset(queryset)
@@ -253,16 +251,11 @@ class MemoText(ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
-
-class MemoLink(ModelViewSet):#링크모아보기
-    queryset = Memo.objects.all()
-    serializer_class = MemoSerializer
-    pagination_class = PageNumberPagination
-
-    def list(self, request, *args, **kwargs):
+    @action(detail=False)
+    def links(self, request, *args, **kwargs):
         user = request.user
         if request.user.is_anonymous:
-            return JsonResponse("알 수 없는 유저입니다.", status=404)
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         queryset = Memo.objects.filter(url__isnull=False, user=user).order_by('-created_at')
         self.paginator.page_size_query_param = "page_size"
         page = self.paginate_queryset(queryset)
@@ -271,6 +264,10 @@ class MemoLink(ModelViewSet):#링크모아보기
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+
+
+
+
 
 
 
