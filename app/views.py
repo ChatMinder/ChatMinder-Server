@@ -23,8 +23,8 @@ from app.storages import get_s3_connection
 from server.settings.base import env
 
 
-class BasicPagination(PageNumberPagination):
-    page_size_query_param = 'limit'
+# class BasicPagination(PageNumberPagination):
+#     page_size_query_param = 'limit'
 
 
 def get_random_hash(length):
@@ -143,7 +143,7 @@ class ImagesView(APIView):
 
 
 class BookmarkView(APIView, PaginationHandlerMixin):
-    pagination_class = BasicPagination
+    pagination_class = PageNumberPagination
 
     def get_memos(self, pk):
         return get_object_or_404(Memo, pk=pk)
@@ -166,20 +166,22 @@ class BookmarkView(APIView, PaginationHandlerMixin):
 
 
 class MemoList(APIView, PaginationHandlerMixin):
-    pagination_class = BasicPagination
+    pagination_class = PageNumberPagination
 
     def get(self, request, *args, **kwargs):
-        memos = Memo.objects.all().order_by('-created_at')
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse("알 수 없는 유저입니다.", status=404, safe=False)
+        memos = Memo.objects.filter(user=user).order_by('-created_at')
         page = self.paginate_queryset(memos)
         if page is not None:
             serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
         else:
             serializer = MemoSerializer(memos, many=True)
-        return JsonResponse(serializer.data, status=status.HTTP_200_OK)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        print(user)
         if request.user.is_anonymous:
             return JsonResponse("알 수 없는 유저입니다.", status=404)
         serializer = MemoSerializer(data=request.data)
@@ -190,7 +192,7 @@ class MemoList(APIView, PaginationHandlerMixin):
                 except Tag.DoesNotExist:
                     tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
                 Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag)
-                memos = Memo.objects.all().order_by('-created_at')
+                memos = Memo.objects.filter(user=user).order_by('-created_at')
                 page = self.paginate_queryset(memos)
                 if page is not None:
                     serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
@@ -198,14 +200,15 @@ class MemoList(APIView, PaginationHandlerMixin):
                     serializer = MemoSerializer(memos, many=True)
                 return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                serializer.save()
-                memos = Memo.objects.all().order_by('-created_at')
+                tag = Tag.objects.get(id=request.data['tag'])
+                Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag, user=user)
+                memos = Memo.objects.filter(user=user).order_by('-created_at')
                 page = self.paginate_queryset(memos)
                 if page is not None:
-                    serializer1 = self.get_paginated_response(MemoSerializer(page, many=True).data)
+                    serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
                 else:
-                    serializer1 = MemoSerializer(memos, many=True)
-                return JsonResponse(serializer1.data, status=status.HTTP_201_CREATED)
+                    serializer = MemoSerializer(memos, many=True)
+                return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -238,9 +241,17 @@ class MemoText(ModelViewSet):
     pagination_class = PageNumberPagination
 
     def list(self, request, *args, **kwargs):
-        queryset = Memo.objects.filter(memo_text__isnull=False).order_by('-created_at')
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse("알 수 없는 유저입니다.", status=404)
+        queryset = Memo.objects.filter(memo_text__isnull=False, user=user).order_by('-created_at')
+        self.paginator.page_size_query_param = "page_size"
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
-        return JsonResponse(serializer.data, status=status.HTTP_200_OK)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 
 class MemoLink(ModelViewSet):#링크모아보기
@@ -249,9 +260,17 @@ class MemoLink(ModelViewSet):#링크모아보기
     pagination_class = PageNumberPagination
 
     def list(self, request, *args, **kwargs):
-        queryset = Memo.objects.filter(url__isnull=False).order_by('-created_at')
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse("알 수 없는 유저입니다.", status=404)
+        queryset = Memo.objects.filter(url__isnull=False, user=user).order_by('-created_at')
+        self.paginator.page_size_query_param = "page_size"
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
-        return JsonResponse(serializer.data, status=status.HTTP_200_OK)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 
 
