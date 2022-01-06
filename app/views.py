@@ -141,6 +141,30 @@ class ImagesView(APIView):
         return Response(serializer.errors, status=400)
 
 
+
+class BookmarkView(APIView, PaginationHandlerMixin):
+    pagination_class = BasicPagination
+
+    def get_memos(self, pk):
+        return get_object_or_404(Memo, pk=pk)
+
+    def post(self, request):
+        memo = self.get_memos(pk=request.data['memo'])
+        if request.data['is_marked']:
+            memo.is_marked = True
+        else:
+            memo.is_marked = False
+        memo.save()
+        memos = Memo.objects.all().order_by('-created_at')
+        page = self.paginate_queryset(memos)
+        if page is not None:
+            serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
+        else:
+            serializer = MemoSerializer(memos, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+
+
+
 class MemoList(APIView, PaginationHandlerMixin):
     pagination_class = BasicPagination
 
