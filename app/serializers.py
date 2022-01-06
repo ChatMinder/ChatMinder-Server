@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from django.contrib.auth import authenticate
 
-from app.models import User, Memo, Tag, Image, Link
+from app.models import User, Memo, Tag, Image
 
 
 class TokenSerializer(TokenObtainPairSerializer):
@@ -51,15 +51,8 @@ class ImageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class LinkSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Link
-        fields = '__all__'
-
-
 class MemoSerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField(allow_null=True)
-    #urls = LinkSerializer(many=True, write_only=True)
     tag_name = serializers.SerializerMethodField()
     tag_color = serializers.SerializerMethodField()
 
@@ -95,7 +88,6 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ['tag_name', 'tag_color', 'user', 'tag_memos']
-
 
 
 class UserSerializer(serializers.ModelSerializer):
