@@ -2,7 +2,7 @@ from django.conf.urls.static import static
 from django.urls import include, path
 from rest_framework import routers
 
-from app.views import HelloView, KakaoLoginView, ImagesView, UserView, BookmarkView, MemoFilterViewSet
+from app.views import HelloView, KakaoLoginView, ImagesView, UserView, BookmarkView, MemoFilterViewSet, TagList, TagDetail
 
 
 from app.views import MemoList, MemoDetial
@@ -21,5 +21,7 @@ urlpatterns = [
     path('memos/bookmark', BookmarkView.as_view()),
     path('images', ImagesView.as_view()),
     path('users', UserView.as_view()),
+    path('tags', TagList.as_view()),
+    path('tags/<int:pk>', TagDetail.as_view())
 ] + static(base.MEDIA_URL, document_root=base.MEDIA_ROOT)
 
