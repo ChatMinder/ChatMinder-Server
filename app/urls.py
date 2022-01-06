@@ -4,6 +4,7 @@ from rest_framework import routers
 
 from app.views import HelloView, KakaoLoginView, ImagesView, UserView, BookmarkView, MemoFilterViewSet
 
+
 from app.views import MemoList, MemoDetial
 from server.settings import base
 
