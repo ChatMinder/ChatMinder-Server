@@ -199,7 +199,10 @@ class MemoList(APIView, PaginationHandlerMixin):
                     serializer = MemoSerializer(memos, many=True)
                 return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                tag = Tag.objects.get(id=request.data['tag'])
+                try:
+                    tag = Tag.objects.get(id=request.data['tag'])
+                except Tag.DoesNotExist:
+                    tag = None
                 Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag, user=user)
                 memos = Memo.objects.filter(user=user).order_by('-created_at')
                 page = self.paginate_queryset(memos)
@@ -267,6 +270,27 @@ class MemoFilterViewSet(ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
+
+
+    # @action(detail=False)
+    # def images(self, request, *args, **kwargs):
+    #     user = request.user
+    #     if request.user.is_anonymous:
+    #         return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+    #     images_data = Image.objects.all()
+    #     for i in images_data:
+    #         print(i+1)
+    #         a = Memo.objects.filter(id=i.memo_id).order_by('-created_at')
+    #         b =Memo.objects.filter(id=(i+1).memo_id).order_by('-created_at')
+    #         queryset = list(chain(a,b))
+    #         print(queryset)
+    #     self.paginator.page_size_query_param = "page_size"
+    #     page = self.paginate_queryset(queryset)
+    #     if page is not None:
+    #         serializer = self.get_serializer(page, many=True)
+    #         return self.get_paginated_response(serializer.data)
+    #     serializer = self.get_serializer(queryset, many=True)
+    #     return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 
 
