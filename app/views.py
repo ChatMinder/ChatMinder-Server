@@ -269,6 +269,21 @@ class MemoFilterViewSet(ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
+    @action(detail=True)
+    def tags(self, request, pk):
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+        queryset = Memo.objects.filter(tag_id=pk, user=user).order_by('-created_at')
+        self.paginator.page_size_query_param = "page_size"
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+
+
 
     # @action(detail=False)
     # def images(self, request, *args, **kwargs):
@@ -328,7 +343,7 @@ class TagDetail(APIView):
                 serializer.save()
                 return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
 
-        def delete(self, request, pk):  # 특정 Post 삭제
+        def delete(self, request, pk):
             tags = self.get_tag(pk)
             tags.delete()
             return JsonResponse({'message': '삭제 완료'}, status=status.HTTP_200_OK)
