@@ -63,11 +63,12 @@ class HelloView(APIView):
 # /users
 class UserView(APIView):
     def get(self, request):
-        if request.user.is_anonymous:
+        try:
+            user_authenticate(request)
+            serializer = UserSerializer(request.user)
+            return JsonResponse(serializer.data, status=200)
+        except UserIsAnonymous:
             return Response("알 수 없는 유저입니다.", status=404)
-
-        serializer = UserSerializer(request.user)
-        return JsonResponse(serializer.data, status=200)
 
     # for debug
     def post(self, request):
@@ -110,45 +111,78 @@ class KakaoLoginView(APIView):
 
         serializer = TokenSerializer(data=user_data)
         if serializer.is_valid():
-            return Response(serializer.data, status=200)
+            return Response({"message": "로그인 성공", "data": serializer.data}, status=200)
         else:
             print(serializer.errors)
-        return Response("Kakao Login False", status=400)
+        return JsonResponse({"message": "로그인 실패"}, status=400)
 
 
 # /images
 class ImagesView(APIView):
-    def post(self, request):
-        if request.user.is_anonymous:
-            return Response("알 수 없는 유저입니다.", status=404)
-        user_kakao_id = request.user.kakao_id
-        image = request.FILES['image']
-        splited_name = image.name.split('.')
-        extension = "." + splited_name[len(splited_name)-1]
-        memo_id = request.data['memo_id']
+    def get_extension(self, image_name):
+        splited_name = image_name.split('.')
+        return '.' + splited_name[len(splited_name) - 1]
 
-        hash_value = get_random_hash(length=30)
-        resource_url = user_kakao_id + "/" + hash_value + extension
-        file_name = hash_value + extension
-        image_data = {
+    def get_resource_url(self, user, hash, extension):
+        return user.kakao_id + '/' + hash + extension
+
+    def get_filename(self, hash, extension):
+        return hash + extension
+
+    def get_image_data(self, user_id, memo_id, resource_url, filename):
+        return {
+            "user": user_id,
             "memo": memo_id,
             "url": resource_url,
-            "name": file_name
+            "name": filename
         }
-        serializer = ImageSerializer(data=image_data)
-        if serializer.is_valid():
-            serializer.save()
-            s3 = get_s3_connection()
-            s3.upload_fileobj(
-                image,
-                env('S3_BUCKET_NAME'),
-                resource_url,
-                ExtraArgs={
-                    "ContentType": image.content_type,
-                }
-            )
-            return Response(serializer.data, status=200)
-        return Response(serializer.errors, status=400)
+
+    def get(self, request):
+        try:
+            user_authenticate(request)
+            image_id = request.GET.get('id')
+            image = get_object_or_404(Image, pk=image_id)
+            ownership_check(request.user, image.user)
+            image_data = ImageSerializer(image).data
+            return JsonResponse({"message": "이미지 조회 성공", "data": image_data}, status=200)
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except UserIsNotOwner:
+            return JsonResponse({"message": "권한이 없습니다."}, status=400)
+
+    def post(self, request):
+        try:
+            user_authenticate(request)
+            hash = get_random_hash(length=30)
+            user = request.user
+            image_file = request.FILES['image']
+            memo_id = request.data['memo_id']
+            extension = self.get_extension(image_file.name)
+            resource_url = self.get_resource_url(user, hash, extension)
+            filename = self.get_filename(hash, extension)
+            image_data = self.get_image_data(user.id, memo_id, resource_url, filename)
+            serializer = ImageSerializer(data=image_data)
+            if serializer.is_valid():
+                serializer.save()
+                s3_upload_image(image_file, resource_url)
+                return JsonResponse({"message": "이미지 업로드 성공", "data": serializer.data}, status=200)
+            return Response(serializer.errors, status=400)
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+
+    def delete(self, request):
+        try:
+            user_authenticate(request)
+            image_id = request.GET.get('image', None)
+            image = get_object_or_404(Image, pk=image_id)
+            ownership_check(request.user, image.user)
+            image.delete()
+            s3_delete_image(image)
+            return JsonResponse({"message": "이미지 삭제 성공"}, status=200)
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except UserIsNotOwner:
+            return JsonResponse({"message": "권한이 없습니다."}, status=400)
 
 
 class BookmarkView(APIView, PaginationHandlerMixin):
@@ -193,10 +227,11 @@ class MemoList(APIView, PaginationHandlerMixin):
         serializer = MemoSerializer(data=request.data)
         if serializer.is_valid():
             if request.data['is_tag_new']:
-                try: #DB에 중복값이 있다면 저장안함
+                try:  # DB에 중복값이 있다면 저장안함
                     tag = Tag.objects.get(tag_name=request.data['tag_name'])
                 except Tag.DoesNotExist:
-                    tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
+                    tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'],
+                                             user=user)
                 Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag)
                 memos = Memo.objects.all().order_by('-created_at')
                 page = self.paginate_queryset(memos)
@@ -251,7 +286,7 @@ class MemoText(ModelViewSet):
         return JsonResponse(serializer.data, status=status.HTTP_200_OK)
 
 
-class MemoLink(ModelViewSet):#링크모아보기
+class MemoLink(ModelViewSet):  # 링크모아보기
     queryset = Memo.objects.all()
     serializer_class = MemoSerializer
     pagination_class = PageNumberPagination
@@ -260,6 +295,3 @@ class MemoLink(ModelViewSet):#링크모아보기
         queryset = Memo.objects.filter(url__isnull=False).order_by('-created_at')
         serializer = self.get_serializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK)
-
-
-
