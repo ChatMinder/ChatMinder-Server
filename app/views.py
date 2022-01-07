@@ -35,6 +35,16 @@ def get_random_hash(length):
     return result
 
 
+def user_authenticate(request):
+    if request.user.is_anonymous:
+        raise UserIsAnonymous
+
+
+def ownership_check(user1, user2):
+    if user1 != user2:
+        raise UserIsNotOwner
+
+
 # /hello
 class HelloView(APIView):
     def get(self, request):
