@@ -364,6 +364,8 @@ class MemoFilterViewSet(ModelViewSet):
     #     return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 
+
+
 class TagList(APIView):
 
     def get(self, request):
@@ -382,7 +384,6 @@ class TagList(APIView):
         tags = Tag.objects.filter(user=user).order_by('-created_at')
         serializer = TagSerializer(tags, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
-
 
 class TagDetail(APIView):
         def get_tag(self, pk):
