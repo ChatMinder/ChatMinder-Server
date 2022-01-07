@@ -139,10 +139,15 @@ class ImagesView(APIView):
     def get(self, request):
         try:
             user_authenticate(request)
-            image_id = request.GET.get('id')
-            image = get_object_or_404(Image, pk=image_id)
-            ownership_check(request.user, image.user)
-            image_data = ImageSerializer(image).data
+            image_id = request.GET.get('id', None)
+            many = False
+            if image_id is None:
+                many = True
+                image = Image.objects.filter(user=request.user)
+            else:
+                image = get_object_or_404(Image, pk=image_id)
+                ownership_check(request.user, image.user)
+            image_data = ImageSerializer(image, many=many).data
             return JsonResponse({"message": "이미지 조회 성공", "data": image_data}, status=200)
         except UserIsAnonymous:
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
