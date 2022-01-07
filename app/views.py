@@ -14,11 +14,11 @@ from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet
 
-
 from app.pagination import PaginationHandlerMixin
 from app.serializers import TokenSerializer, MemoSerializer, UserSerializer, ImageSerializer
 from app.models import User, Memo, Tag, Image
-from app.storages import get_s3_connection
+from app.storages import s3_upload_image, s3_delete_image
+from app.exceptions import *
 
 from server.settings.base import env
 
