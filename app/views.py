@@ -192,13 +192,17 @@ class BookmarkView(APIView, PaginationHandlerMixin):
         return get_object_or_404(Memo, pk=pk)
 
     def post(self, request):
-        memo = self.get_memos(pk=request.data['memo'])
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+        memo = Memo.objects.get(id=request.data['memo'], user=user)
+        print(memo)
         if request.data['is_marked']:
             memo.is_marked = True
         else:
             memo.is_marked = False
         memo.save()
-        memos = Memo.objects.all().order_by('-created_at')
+        memos = Memo.objects.filter(user=user).order_by('-created_at')
         page = self.paginate_queryset(memos)
         if page is not None:
             serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
@@ -211,16 +215,17 @@ class MemoList(APIView, PaginationHandlerMixin):
     pagination_class = PageNumberPagination
 
     def get(self, request, *args, **kwargs):
-        user = request.user
-        if request.user.is_anonymous:
-            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
-        memos = Memo.objects.filter(user=user).order_by('-created_at')
-        page = self.paginate_queryset(memos)
-        if page is not None:
-            serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
-        else:
-            serializer = MemoSerializer(memos, many=True)
-        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+        try:
+            user_authenticate(request)
+            memos = Memo.objects.filter(user=request.user).order_by('-created_at')
+            page = self.paginate_queryset(memos)
+            if page is not None:
+                serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
+            else:
+                serializer = MemoSerializer(memos, many=True)
+            return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
 
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -261,23 +266,32 @@ class MemoDetial(APIView):
     def get_memos(self, pk):
         return get_object_or_404(Memo, pk=pk)
 
-    def get(self, request, pk):
-        memos = self.get_memos(pk=pk)
-        serializer = MemoSerializer(memos)
-        return JsonResponse(serializer)
-
     def patch(self, request, pk):
-        memos = self.get_memos(pk)
-        serializer = MemoSerializer(memos)
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
+        try:
+            user_authenticate(request)
+            memo = self.get_memos(pk)
+            ownership_check(request.user, memo.user)
+            serializer = MemoSerializer(memo, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+            return JsonResponse(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except UserIsNotOwner:
+            return JsonResponse({"message": "권한이 없습니다."}, status=400)
 
-    def delete(self, request, pk):  # 특정 Post 삭제
-        memos = self.get_memos(pk)
-        memos.delete()
-        return JsonResponse("삭제 완료", status=status.HTTP_200_OK)
+    def delete(self, request, pk):
+        try:
+            user_authenticate(request)
+            memo = self.get_memos(pk)
+            ownership_check(request.user, memo.user)
+            memo.delete()
+            return JsonResponse({"message": "메모 삭제 성공"}, status=status.HTTP_200_OK)
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except UserIsNotOwner:
+            return JsonResponse({"message": "권한이 없습니다."}, status=400)
 
 
 class MemoFilterViewSet(ModelViewSet):
@@ -360,7 +374,7 @@ class TagList(APIView):
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         tags = Tag.objects.filter(user=user).order_by('-created_at')
         serializer = TagSerializer(tags, many=True, context={'user': request.user})
-        return JsonResponse(serializer.data, status=status.HTTP_200_OK)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
     def post(self, request):
         user = request.user
@@ -375,20 +389,31 @@ class TagDetail(APIView):
         def get_tag(self, pk):
             return get_object_or_404(Tag, pk=pk)
 
-        def get(self, request, pk):
-            tags = self.get_tag(pk=pk)
-            serializer = TagSerializer(tags)
-            return JsonResponse(serializer.data)
-
         def patch(self, request, pk):
-            tags = self.get_tag(pk)
-            serializer = TagSerializer(tags)
-            if serializer.is_valid():
-                serializer.save()
-                return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+            try:
+                user_authenticate(request)
+                tag = self.get_tag(pk)
+                ownership_check(request.user, tag.user)
+                serializer = TagSerializer(tag, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+                return JsonResponse(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
+            except UserIsAnonymous:
+                return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+            except UserIsNotOwner:
+                return JsonResponse({"message": "권한이 없습니다."}, status=400)
+
 
         def delete(self, request, pk):
-            tags = self.get_tag(pk)
-            tags.delete()
-            return JsonResponse({'message': '삭제 완료'}, status=status.HTTP_200_OK)
+            try:
+                user_authenticate(request)
+                tag = self.get_tag(pk)
+                ownership_check(request.user, tag.user)
+                tag.delete()
+                return JsonResponse({"message": "태그 삭제 성공"}, status=status.HTTP_200_OK)
+            except UserIsAnonymous:
+                return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+            except UserIsNotOwner:
+                return JsonResponse({"message": "권한이 없습니다."}, status=400)
 
