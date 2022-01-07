@@ -1,4 +1,6 @@
 import json
+from itertools import chain
+
 import requests
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -7,6 +9,7 @@ from rest_framework import status
 import string
 import random
 
+from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,16 +18,12 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet
 
 from app.pagination import PaginationHandlerMixin
-from app.serializers import TokenSerializer, MemoSerializer, UserSerializer, ImageSerializer
+from app.serializers import TokenSerializer, MemoSerializer, UserSerializer, ImageSerializer, TagSerializer
 from app.models import User, Memo, Tag, Image
 from app.storages import s3_upload_image, s3_delete_image
 from app.exceptions import *
 
 from server.settings.base import env
-
-
-class BasicPagination(PageNumberPagination):
-    page_size_query_param = 'limit'
 
 
 def get_random_hash(length):
@@ -185,8 +184,9 @@ class ImagesView(APIView):
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
 
 
+
 class BookmarkView(APIView, PaginationHandlerMixin):
-    pagination_class = BasicPagination
+    pagination_class = PageNumberPagination
 
     def get_memos(self, pk):
         return get_object_or_404(Memo, pk=pk)
@@ -208,32 +208,33 @@ class BookmarkView(APIView, PaginationHandlerMixin):
 
 
 class MemoList(APIView, PaginationHandlerMixin):
-    pagination_class = BasicPagination
+    pagination_class = PageNumberPagination
 
     def get(self, request, *args, **kwargs):
-        memos = Memo.objects.all().order_by('-created_at')
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+        memos = Memo.objects.filter(user=user).order_by('-created_at')
         page = self.paginate_queryset(memos)
         if page is not None:
             serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
         else:
             serializer = MemoSerializer(memos, many=True)
-        return JsonResponse(serializer.data, status=status.HTTP_200_OK)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        print(user)
         if request.user.is_anonymous:
-            return JsonResponse("알 수 없는 유저입니다.", status=404)
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         serializer = MemoSerializer(data=request.data)
         if serializer.is_valid():
             if request.data['is_tag_new']:
                 try:  # DB에 중복값이 있다면 저장안함
                     tag = Tag.objects.get(tag_name=request.data['tag_name'])
                 except Tag.DoesNotExist:
-                    tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'],
-                                             user=user)
-                Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag)
-                memos = Memo.objects.all().order_by('-created_at')
+                    tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
+                Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag, user=user)
+                memos = Memo.objects.filter(user=user).order_by('-created_at')
                 page = self.paginate_queryset(memos)
                 if page is not None:
                     serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
@@ -241,14 +242,18 @@ class MemoList(APIView, PaginationHandlerMixin):
                     serializer = MemoSerializer(memos, many=True)
                 return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                serializer.save()
-                memos = Memo.objects.all().order_by('-created_at')
+                try:
+                    tag = Tag.objects.get(id=request.data['tag'])
+                except Tag.DoesNotExist:
+                    tag = None
+                Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag, user=user)
+                memos = Memo.objects.filter(user=user).order_by('-created_at')
                 page = self.paginate_queryset(memos)
                 if page is not None:
-                    serializer1 = self.get_paginated_response(MemoSerializer(page, many=True).data)
+                    serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
                 else:
-                    serializer1 = MemoSerializer(memos, many=True)
-                return JsonResponse(serializer1.data, status=status.HTTP_201_CREATED)
+                    serializer = MemoSerializer(memos, many=True)
+                return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -261,7 +266,7 @@ class MemoDetial(APIView):
         serializer = MemoSerializer(memos)
         return JsonResponse(serializer)
 
-    def put(self, request, pk):
+    def patch(self, request, pk):
         memos = self.get_memos(pk)
         serializer = MemoSerializer(memos)
         if serializer.is_valid():
@@ -275,23 +280,115 @@ class MemoDetial(APIView):
         return JsonResponse("삭제 완료", status=status.HTTP_200_OK)
 
 
-class MemoText(ModelViewSet):
+class MemoFilterViewSet(ModelViewSet):
     queryset = Memo.objects.all()
     serializer_class = MemoSerializer
     pagination_class = PageNumberPagination
 
-    def list(self, request, *args, **kwargs):
-        queryset = Memo.objects.filter(memo_text__isnull=False).order_by('-created_at')
+    @action(detail=False)
+    def texts(self, request, *args, **kwargs):
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+        queryset = Memo.objects.filter(memo_text__isnull=False, user=user).order_by('-created_at')
+        self.paginator.page_size_query_param = "page_size"
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+
+    @action(detail=False)
+    def links(self, request, *args, **kwargs):
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+        queryset = Memo.objects.filter(url__isnull=False, user=user).order_by('-created_at')
+        self.paginator.page_size_query_param = "page_size"
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+
+    @action(detail=True)
+    def tags(self, request, pk):
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+        queryset = Memo.objects.filter(tag_id=pk, user=user).order_by('-created_at')
+        self.paginator.page_size_query_param = "page_size"
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+
+
+
+    # @action(detail=False)
+    # def images(self, request, *args, **kwargs):
+    #     user = request.user
+    #     if request.user.is_anonymous:
+    #         return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+    #     images_data = Image.objects.all()
+    #     for i in images_data:
+    #         print(i+1)
+    #         a = Memo.objects.filter(id=i.memo_id).order_by('-created_at')
+    #         b =Memo.objects.filter(id=(i+1).memo_id).order_by('-created_at')
+    #         queryset = list(chain(a,b))
+    #         print(queryset)
+    #     self.paginator.page_size_query_param = "page_size"
+    #     page = self.paginate_queryset(queryset)
+    #     if page is not None:
+    #         serializer = self.get_serializer(page, many=True)
+    #         return self.get_paginated_response(serializer.data)
+    #     serializer = self.get_serializer(queryset, many=True)
+    #     return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+
+
+
+
+class TagList(APIView):
+
+    def get(self, request):
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+        tags = Tag.objects.filter(user=user).order_by('-created_at')
+        serializer = TagSerializer(tags, many=True, context={'user': request.user})
         return JsonResponse(serializer.data, status=status.HTTP_200_OK)
 
+    def post(self, request):
+        user = request.user
+        if request.user.is_anonymous:
+            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+        Tag.objects.create(user=user, tag_name=request.data['tag_name'], tag_color=request.data['tag_color'])
+        tags = Tag.objects.filter(user=user).order_by('-created_at')
+        serializer = TagSerializer(tags, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
 
-class MemoLink(ModelViewSet):  # 링크모아보기
-    queryset = Memo.objects.all()
-    serializer_class = MemoSerializer
-    pagination_class = PageNumberPagination
+class TagDetail(APIView):
+        def get_tag(self, pk):
+            return get_object_or_404(Tag, pk=pk)
 
-    def list(self, request, *args, **kwargs):
-        queryset = Memo.objects.filter(url__isnull=False).order_by('-created_at')
-        serializer = self.get_serializer(queryset, many=True)
-        return JsonResponse(serializer.data, status=status.HTTP_200_OK)
+        def get(self, request, pk):
+            tags = self.get_tag(pk=pk)
+            serializer = TagSerializer(tags)
+            return JsonResponse(serializer.data)
+
+        def patch(self, request, pk):
+            tags = self.get_tag(pk)
+            serializer = TagSerializer(tags)
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+
+        def delete(self, request, pk):
+            tags = self.get_tag(pk)
+            tags.delete()
+            return JsonResponse({'message': '삭제 완료'}, status=status.HTTP_200_OK)
+

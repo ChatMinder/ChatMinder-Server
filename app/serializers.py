@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from django.contrib.auth import authenticate
 
-from app.models import User, Memo, Tag, Image, Link
+from app.models import User, Memo, Tag, Image
 
 
 class TokenSerializer(TokenObtainPairSerializer):
@@ -51,15 +51,8 @@ class ImageSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class LinkSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Link
-        fields = '__all__'
-
-
 class MemoSerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField(allow_null=True)
-    #urls = LinkSerializer(many=True, write_only=True)
     tag_name = serializers.SerializerMethodField()
     tag_color = serializers.SerializerMethodField()
 
@@ -69,8 +62,8 @@ class MemoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text', 'is_tag_new', 'url', 'tag_name', 'images', 'is_marked',
-                  'tag_color', 'tag', 'created_at', 'updated_at']
+        fields = ['id', 'memo_text', 'url', 'tag', 'tag_name', 'tag_color', 'images', 'is_marked',
+                  'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
         if obj.tag:
@@ -90,12 +83,16 @@ class MemoSerializer(serializers.ModelSerializer):
 
 
 class TagSerializer(serializers.ModelSerializer):
-    tag_memos = MemoSerializer(many=True, write_only=True, allow_null=True)
+    # memos = serializers.SerializerMethodField('get_memos_serializer')
+    #
+    # def get_memos_serializer(self, obj):
+    #     memos = Memo.objects.filter(tag=obj, user=self.context.get('user'))
+    #     serializer = MemoSerializer(memos, many=True, context=self.context)
+    #     return serializer.data
 
     class Meta:
         model = Tag
-        fields = ['tag_name', 'tag_color', 'user', 'tag_memos']
-
+        fields = ['id', 'tag_name', 'tag_color', 'user', 'created_at', 'updated_at']
 
 
 class UserSerializer(serializers.ModelSerializer):
