@@ -62,7 +62,7 @@ class MemoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text', 'url', 'tag', 'tag_name', 'tag_color', 'images', 'is_marked',
+        fields = ['id', 'memo_text', 'url', 'tag', 'tag_name', 'tag_color', 'images', 'is_marked', 'timestamp',
                   'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
