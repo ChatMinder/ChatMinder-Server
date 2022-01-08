@@ -33,14 +33,20 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
 
 class Tag(BaseModel):
     COLOR_IN_TAG_CHOICES = [
-        ('RD', 'red'),
-        ('GR', 'green'),
-        ('BL', 'blue'),
-        # 더 추가해야됨!
+        ('#5DA7EF', '#5DA7EF'),
+        ('#9ECBFF', '#9ECBFF'),
+        ('#C8D769', '#C8D769'),
+        ('#50B093', '#50B093'),
+        ('#81C7BA', '#81C7BA'),
+        ('#B282CC', '#B282CC'),
+        ('#F85C5D', '#F85C5D'),
+        ('#FFAB41', '#FFAB41'),
+        ('#FFBE6C', '#FFBE6C'),
+        ('#FFD84E', '#FFD84E'),
     ]
 
     tag_name = models.CharField(max_length=20, null=True, blank=True)
-    tag_color = models.CharField(max_length=2, choices=COLOR_IN_TAG_CHOICES, null=True, blank=True)
+    tag_color = models.CharField(max_length=10, choices=COLOR_IN_TAG_CHOICES, null=True, blank=True)
     user = models.ForeignKey('User', on_delete=models.CASCADE)
 
     class Meta:
@@ -52,8 +58,10 @@ class Memo(BaseModel):
     url = models.URLField(null=True, blank=True)
     is_marked = models.BooleanField(default=False)
     is_tag_new = models.BooleanField(default=False)
+    timestamp = models.CharField(max_length=50)
     tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True, related_name='memo_tag')
     user = models.ForeignKey('User', on_delete=models.CASCADE,  null=True, related_name='memo_user')
+
 
     class Meta:
         db_table = 'memo'
