@@ -246,7 +246,8 @@ class MemoList(APIView, PaginationHandlerMixin):
                 try:  # DB에 중복값이 있다면 저장안함
                     tag = Tag.objects.get(tag_name=request.data['tag_name'])
                 except Tag.DoesNotExist:
-                    tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'], user=user)
+                    tag = Tag.objects.create(tag_name=request.data['tag_name'], tag_color=request.data['tag_color'],
+                                             user=user)
                 Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag, user=user)
                 memos = Memo.objects.filter(user=user).order_by('-created_at')
                 page = self.paginate_queryset(memos)
@@ -341,8 +342,6 @@ class MemoFilterViewSet(ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
-
-
     # @action(detail=False)
     # def images(self, request, *args, **kwargs):
     #     user = request.user
@@ -364,8 +363,6 @@ class MemoFilterViewSet(ModelViewSet):
     #     return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 
-
-
 class TagList(APIView):
 
     def get(self, request):
@@ -385,24 +382,24 @@ class TagList(APIView):
         serializer = TagSerializer(tags, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
 
+
 class TagDetail(APIView):
-        def get_tag(self, pk):
-            return get_object_or_404(Tag, pk=pk)
+    def get_tag(self, pk):
+        return get_object_or_404(Tag, pk=pk)
 
-        def get(self, request, pk):
-            tags = self.get_tag(pk=pk)
-            serializer = TagSerializer(tags)
-            return JsonResponse(serializer.data)
+    def get(self, request, pk):
+        tags = self.get_tag(pk=pk)
+        serializer = TagSerializer(tags)
+        return JsonResponse(serializer.data)
 
-        def patch(self, request, pk):
-            tags = self.get_tag(pk)
-            serializer = TagSerializer(tags)
-            if serializer.is_valid():
-                serializer.save()
-                return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+    def patch(self, request, pk):
+        tags = self.get_tag(pk)
+        serializer = TagSerializer(tags)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
 
-        def delete(self, request, pk):
-            tags = self.get_tag(pk)
-            tags.delete()
-            return JsonResponse({'message': '삭제 완료'}, status=status.HTTP_200_OK)
-
+    def delete(self, request, pk):
+        tags = self.get_tag(pk)
+        tags.delete()
+        return JsonResponse({'message': '삭제 완료'}, status=status.HTTP_200_OK)
