@@ -44,6 +44,28 @@ def ownership_check(user1, user2):
         raise UserIsNotOwner
 
 
+def get_extension(image_name):
+    splited_name = image_name.split('.')
+    return '.' + splited_name[len(splited_name) - 1]
+
+
+def get_resource_url(user, hash, extension):
+    return user.kakao_id + '/' + hash + extension
+
+
+def get_filename(hash, extension):
+    return hash + extension
+
+
+def get_image_data(user_id, memo_id, resource_url, filename):
+    return {
+        "user": user_id,
+        "memo": memo_id,
+        "url": resource_url,
+        "name": filename
+    }
+
+
 # /hello
 class HelloView(APIView):
     def get(self, request):
@@ -118,31 +140,18 @@ class KakaoLoginView(APIView):
 
 # /images
 class ImagesView(APIView):
-    def get_extension(self, image_name):
-        splited_name = image_name.split('.')
-        return '.' + splited_name[len(splited_name) - 1]
-
-    def get_resource_url(self, user, hash, extension):
-        return user.kakao_id + '/' + hash + extension
-
-    def get_filename(self, hash, extension):
-        return hash + extension
-
-    def get_image_data(self, user_id, memo_id, resource_url, filename):
-        return {
-            "user": user_id,
-            "memo": memo_id,
-            "url": resource_url,
-            "name": filename
-        }
-
     def get(self, request):
         try:
             user_authenticate(request)
-            image_id = request.GET.get('id')
-            image = get_object_or_404(Image, pk=image_id)
-            ownership_check(request.user, image.user)
-            image_data = ImageSerializer(image).data
+            image_id = request.GET.get('id', None)
+            many = False
+            if image_id is None:
+                many = True
+                image = Image.objects.filter(user=request.user)
+            else:
+                image = get_object_or_404(Image, pk=image_id)
+                ownership_check(request.user, image.user)
+            image_data = ImageSerializer(image, many=many).data
             return JsonResponse({"message": "이미지 조회 성공", "data": image_data}, status=200)
         except UserIsAnonymous:
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
@@ -152,27 +161,33 @@ class ImagesView(APIView):
     def post(self, request):
         try:
             user_authenticate(request)
-            hash = get_random_hash(length=30)
             user = request.user
-            image_file = request.FILES['image']
+            size = int(request.data['size'])
             memo_id = request.data['memo_id']
-            extension = self.get_extension(image_file.name)
-            resource_url = self.get_resource_url(user, hash, extension)
-            filename = self.get_filename(hash, extension)
-            image_data = self.get_image_data(user.id, memo_id, resource_url, filename)
-            serializer = ImageSerializer(data=image_data)
-            if serializer.is_valid():
-                serializer.save()
-                s3_upload_image(image_file, resource_url)
-                return JsonResponse({"message": "이미지 업로드 성공", "data": serializer.data}, status=200)
-            return Response(serializer.errors, status=400)
+            ret = []
+            for index in range(size):
+                hash = get_random_hash(length=30)
+                image_name = "image" + str(index)
+                image_file = request.FILES[image_name]
+                extension = get_extension(image_file.name)
+                resource_url = get_resource_url(user, hash, extension)
+                filename = get_filename(hash, extension)
+                image_data = get_image_data(user.id, memo_id, resource_url, filename)
+                serializer = ImageSerializer(data=image_data)
+                if serializer.is_valid():
+                    serializer.save()
+                    s3_upload_image(image_file, resource_url)
+                    ret.append(serializer.data)
+                else:
+                    return Response(serializer.errors, status=400)
+            return JsonResponse({"message": "이미지 업로드 성공", "data": ret}, status=200)
         except UserIsAnonymous:
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
 
     def delete(self, request):
         try:
             user_authenticate(request)
-            image_id = request.GET.get('image', None)
+            image_id = request.GET.get('id', None)
             image = get_object_or_404(Image, pk=image_id)
             ownership_check(request.user, image.user)
             image.delete()
@@ -182,6 +197,7 @@ class ImagesView(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+
 
 
 
@@ -208,6 +224,7 @@ class BookmarkView(APIView):
         #     serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
         # else:
         serializer = MemoSerializer(memos, many=True)
+
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -218,6 +235,7 @@ class MemoList(APIView, PaginationHandlerMixin):
         try:
             user_authenticate(request)
             memos = Memo.objects.filter(user=request.user).order_by('-created_at')
+
             # page = self.paginate_queryset(memos)
             # if page is not None:
             #     serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
@@ -342,8 +360,6 @@ class MemoFilterViewSet(ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
-
-
     # @action(detail=False)
     # def images(self, request, *args, **kwargs):
     #     user = request.user
@@ -365,8 +381,6 @@ class MemoFilterViewSet(ModelViewSet):
     #     return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 
-
-
 class TagList(APIView):
 
     def get(self, request):
@@ -386,35 +400,41 @@ class TagList(APIView):
         serializer = TagSerializer(tags, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
 
+
+
 class TagDetail(APIView):
-        def get_tag(self, pk):
-            return get_object_or_404(Tag, pk=pk)
+    def get_tag(self, pk):
+        return get_object_or_404(Tag, pk=pk)
 
-        def patch(self, request, pk):
-            try:
-                user_authenticate(request)
-                tag = self.get_tag(pk)
-                ownership_check(request.user, tag.user)
-                serializer = TagSerializer(tag, data=request.data, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-                return JsonResponse(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
-            except UserIsAnonymous:
-                return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-            except UserIsNotOwner:
-                return JsonResponse({"message": "권한이 없습니다."}, status=400)
+    def patch(self, request, pk):
+        try:
+            user_authenticate(request)
+            tag = self.get_tag(pk)
+            ownership_check(request.user, tag.user)
+            serializer = TagSerializer(tag, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+            return JsonResponse(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except UserIsNotOwner:
+            return JsonResponse({"message": "권한이 없습니다."}, status=400)
 
 
-        def delete(self, request, pk):
-            try:
-                user_authenticate(request)
-                tag = self.get_tag(pk)
-                ownership_check(request.user, tag.user)
-                tag.delete()
-                return JsonResponse({"message": "태그 삭제 성공"}, status=status.HTTP_200_OK)
-            except UserIsAnonymous:
-                return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-            except UserIsNotOwner:
-                return JsonResponse({"message": "권한이 없습니다."}, status=400)
+    def delete(self, request, pk):
+        try:
+            user_authenticate(request)
+            tag = self.get_tag(pk)
+            ownership_check(request.user, tag.user)
+            tag.delete()
+            return JsonResponse({"message": "태그 삭제 성공"}, status=status.HTTP_200_OK)
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except UserIsNotOwner:
+            return JsonResponse({"message": "권한이 없습니다."}, status=400)
 
+    def delete(self, request, pk):
+        tags = self.get_tag(pk)
+        tags.delete()
+        return JsonResponse({'message': '삭제 완료'}, status=status.HTTP_200_OK)
