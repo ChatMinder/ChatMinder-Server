@@ -44,6 +44,28 @@ def ownership_check(user1, user2):
         raise UserIsNotOwner
 
 
+def get_extension(image_name):
+    splited_name = image_name.split('.')
+    return '.' + splited_name[len(splited_name) - 1]
+
+
+def get_resource_url(user, hash, extension):
+    return user.kakao_id + '/' + hash + extension
+
+
+def get_filename(hash, extension):
+    return hash + extension
+
+
+def get_image_data(user_id, memo_id, resource_url, filename):
+    return {
+        "user": user_id,
+        "memo": memo_id,
+        "url": resource_url,
+        "name": filename
+    }
+
+
 # /hello
 class HelloView(APIView):
     def get(self, request):
@@ -118,24 +140,6 @@ class KakaoLoginView(APIView):
 
 # /images
 class ImagesView(APIView):
-    def get_extension(self, image_name):
-        splited_name = image_name.split('.')
-        return '.' + splited_name[len(splited_name) - 1]
-
-    def get_resource_url(self, user, hash, extension):
-        return user.kakao_id + '/' + hash + extension
-
-    def get_filename(self, hash, extension):
-        return hash + extension
-
-    def get_image_data(self, user_id, memo_id, resource_url, filename):
-        return {
-            "user": user_id,
-            "memo": memo_id,
-            "url": resource_url,
-            "name": filename
-        }
-
     def get(self, request):
         try:
             user_authenticate(request)
