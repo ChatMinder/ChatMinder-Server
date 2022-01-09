@@ -246,9 +246,11 @@ class MemoList(APIView, PaginationHandlerMixin):
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         tag_id = request.data.get('tag', None)
-        if tag_id is None:
-            tag, flag = Tag.objects.get_or_create(tag_name=request.data.get('tag_name', None),
-                                                  tag_color=request.data.get('tag_color', None),
+        tag_name = request.data.get('tag_name', None)
+        tag_color = request.data.get('tag_color', None)
+        if (tag_id is None) and (tag_name is not None) and (tag_color is not None):
+            tag, flag = Tag.objects.get_or_create(tag_name=tag_name,
+                                                  tag_color=tag_color,
                                                   user=user)
             memo = Memo.objects.create(memo_text=request.data.get('memo_text', None),
                                        url=request.data.get('url', None),
@@ -263,10 +265,14 @@ class MemoList(APIView, PaginationHandlerMixin):
             memos_data = MemoSerializer(memo).data
             return JsonResponse({"tag":tags_data, "memo":memos_data}, status=status.HTTP_201_CREATED, safe=False)
         else:
+            try:
+                tag = Tag.objects.get(id=tag_id, user=user)
+            except Tag.DoesNotExist:
+                tag = None
             memo = Memo.objects.create(memo_text=request.data.get('memo_text', None),
                                        url=request.data.get('url', None),
                                        timestamp=request.data.get('timestamp', None),
-                                       tag=tag_id, user=user)
+                                       tag=tag, user=user)
                 # page = self.paginate_queryset(memos)
                 # if page is not None:
                 #     serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
