@@ -199,6 +199,7 @@ class ImagesView(APIView):
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
 
 
+#/memos/bookmark
 class BookmarkView(APIView):
     # pagination_class = PageNumberPagination
 
@@ -209,7 +210,7 @@ class BookmarkView(APIView):
         user = request.user
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
-        memo = Memo.objects.get(id=request.data['memo'], user=user)
+        memo = Memo.objects.get(id=request.data['memo_id'], user=user)
         print(memo)
         if request.data['is_marked']:
             memo.is_marked = True
@@ -225,6 +226,7 @@ class BookmarkView(APIView):
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
 
 
+#/memos
 class MemoList(APIView, PaginationHandlerMixin):
     # pagination_class = PageNumberPagination
 
@@ -245,7 +247,7 @@ class MemoList(APIView, PaginationHandlerMixin):
         user = request.user
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
-        tag_id = request.data.get('tag', None)
+        tag_id = request.data.get('tag_id', None)
         tag_name = request.data.get('tag_name', None)
         tag_color = request.data.get('tag_color', None)
         if (tag_id is None) and (tag_name is not None) and (tag_color is not None):
@@ -281,6 +283,7 @@ class MemoList(APIView, PaginationHandlerMixin):
             return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
 
 
+#/memos/<int:pk>
 class MemoDetail(APIView):
     def get_memos(self, pk):
         return get_object_or_404(Memo, pk=pk)
@@ -313,6 +316,7 @@ class MemoDetail(APIView):
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
 
 
+#/memos/texts
 class MemoTextFilter(APIView):
 
     def get(self, request, *args, **kwargs):
@@ -328,6 +332,8 @@ class MemoTextFilter(APIView):
         serializer = MemoSerializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
+
+#/memos/links
 class MemoLinkFilter(APIView):
 
     def get(self, request, *args, **kwargs):
@@ -343,6 +349,8 @@ class MemoLinkFilter(APIView):
         serializer = MemoSerializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
+
+#/tags/<int:pk>/memos
 class MemoTagFilter(APIView):
 
    def get(self, request, pk):
@@ -359,6 +367,7 @@ class MemoTagFilter(APIView):
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 
+#/tags
 class TagList(APIView):
 
     def get(self, request):
@@ -379,6 +388,7 @@ class TagList(APIView):
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
 
 
+#/tags/<int:pk>
 class TagDetail(APIView):
         def get_tag(self, pk):
             return get_object_or_404(Tag, pk=pk)
