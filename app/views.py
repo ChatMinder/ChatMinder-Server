@@ -246,15 +246,10 @@ class MemoList(APIView, PaginationHandlerMixin):
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         tag_id = request.data.get('tag', None)
-        print(tag_id)
         if tag_id is None:
-            try:  # DB에 중복값이 있다면 저장안함
-                tag = Tag.objects.get(tag_name=request.data.get('tag_name', None))
-            except Tag.DoesNotExist:
-                tag = Tag.objects.create(tag_name=request.data.get('tag_name', None),
-                                         tag_color=request.data.get('tag_color', None),
-                                         user=user)
-            print(tag)
+            tag, flag = Tag.objects.get_or_create(tag_name=request.data.get('tag_name', None),
+                                                  tag_color=request.data.get('tag_color', None),
+                                                  user=user)
             memo = Memo.objects.create(memo_text=request.data.get('memo_text', None),
                                        url=request.data.get('url', None),
                                        timestamp=request.data.get('timestamp', None),
