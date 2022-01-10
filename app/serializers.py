@@ -6,6 +6,17 @@ from django.contrib.auth import authenticate
 from app.models import User, Memo, Tag, Image
 
 
+class DynamicFieldsModelSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        fields = kwargs.pop('fields', None)
+        super().__init__(*args, **kwargs)
+        if fields is not None:
+            allowed = set(fields)
+            existing = set(self.fields)
+            for field_name in existing - allowed:
+                self.fields.pop(field_name)
+
+
 class TokenSerializer(TokenObtainPairSerializer):
     kakao_email = serializers.EmailField(write_only=True, required=False)
     nickname = serializers.CharField(write_only=True, required=False)
@@ -58,6 +69,11 @@ class ImageSerializer(serializers.ModelSerializer):
 
     def get_memo_id(self, obj):
         return obj.memo.id
+
+class DynamicMemoSerializer(DynamicFieldsModelSerializer):
+    class Meta:
+        model = Memo
+        fields = '__all__'
 
 
 class MemoSerializer(serializers.ModelSerializer):
