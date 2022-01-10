@@ -312,7 +312,9 @@ class MemoList(APIView, PaginationHandlerMixin):
                     tag = Tag.objects.get(id=request.data['tag'])
                 except Tag.DoesNotExist:
                     tag = None
-                Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag, user=user)
+                # Memo.objects.create(memo_text=request.data['memo_text'], url=request.data['url'], tag=tag, user=user)
+                Memo.objects.create(memo_text=request.data.get('memo_text', None), url=request.data.get('url', None),
+                                    tag=tag, user=user)
                 memos = Memo.objects.filter(user=user).order_by('-created_at')
                 page = self.paginate_queryset(memos)
                 if page is not None:
@@ -447,6 +449,48 @@ class TagDetail(APIView):
     def get_tag(self, pk):
         return get_object_or_404(Tag, pk=pk)
 
+    def get(self, request, pk):
+        try:
+            user_authenticate(request)
+            tag = self.get_tag(pk)
+            ownership_check(request.user, tag.user)
+
+            has_image = param_exists(request, 'image')
+            has_link = param_exists(request, 'link')
+            has_text = param_exists(request, 'text')
+            is_marked = param_exists(request, 'mark')
+
+            tag_id = pk
+            if tag_id is None:
+                return JsonResponse({"message": "tag id error"}, status=400)
+
+            # 아무것도 선택되지 않았을 때
+            if (has_image or has_link or has_text or is_marked) is False:
+                return JsonResponse({"data": []})
+
+            q = Q()
+            if has_image:
+                q |= Q(tag_id=tag_id, has_image=has_image)
+
+            if has_link:
+                q |= Q(tag_id=tag_id, url__isnull=False)
+
+            if has_text:
+                q |= Q(tag_id=tag_id, memo_text__isnull=False)
+
+            if is_marked:
+                q &= Q(tag_id=tag_id, is_marked=True)
+            else:
+                q &= Q(tag_id=tag_id)
+
+            filteredMemos = Memo.objects.filter(q).distinct()
+            serializer = MemoSerializer(filteredMemos, many=True)
+            return JsonResponse({"message": "메모 필터링 성공", "data": serializer.data})
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except UserIsNotOwner:
+            return JsonResponse({"message": "권한이 없습니다."}, status=400)
+
     def patch(self, request, pk):
         try:
             user_authenticate(request)
@@ -461,7 +505,6 @@ class TagDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
-
 
     def delete(self, request, pk):
         try:
