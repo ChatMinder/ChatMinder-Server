@@ -20,7 +20,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet
 
 from app.pagination import PaginationHandlerMixin
-from app.serializers import TokenSerializer, MemoSerializer, UserSerializer, ImageSerializer, TagSerializer
+from app.serializers import *
 from app.models import User, Memo, Tag, Image
 from app.storages import s3_upload_image, s3_delete_image
 from app.exceptions import *
@@ -450,6 +450,8 @@ class TagDetail(APIView):
             has_text = param_exists(request, 'text')
             is_marked = param_exists(request, 'mark')
 
+            fields = ['id', 'tag_id', 'tag_name', 'tag_color', 'is_marked', 'timestamp', 'created_at', 'updated_at']
+
             tag_id = pk
             if tag_id is None:
                 return JsonResponse({"message": "tag id error"}, status=400)
@@ -461,12 +463,15 @@ class TagDetail(APIView):
             q = Q()
             if has_image:
                 q |= Q(tag_id=tag_id, has_image=has_image)
+                fields.append('images')
 
             if has_link:
                 q |= Q(tag_id=tag_id, url__isnull=False)
+                fields.append('url')
 
             if has_text:
                 q |= Q(tag_id=tag_id, memo_text__isnull=False)
+                fields.append('memo_text')
 
             if is_marked:
                 q &= Q(tag_id=tag_id, is_marked=True)
@@ -474,7 +479,7 @@ class TagDetail(APIView):
                 q &= Q(tag_id=tag_id)
 
             filteredMemos = Memo.objects.filter(q).distinct()
-            serializer = MemoSerializer(filteredMemos, many=True)
+            serializer = DynamicMemoSerializer(filteredMemos, many=True, fields=tuple(fields))
             return JsonResponse({"message": "메모 필터링 성공", "data": serializer.data})
         except UserIsAnonymous:
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
