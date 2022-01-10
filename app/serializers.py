@@ -46,15 +46,25 @@ class TokenSerializer(TokenObtainPairSerializer):
 
 
 class ImageSerializer(serializers.ModelSerializer):
+    memo_id = serializers.SerializerMethodField()
+    user_id = serializers.SerializerMethodField()
+
     class Meta:
         model = Image
-        fields = '__all__'
+        fields = ['id', 'url', 'name', 'user_id', 'memo_id']
+
+    def get_user_id(self, obj):
+        return obj.user.id
+
+    def get_memo_id(self, obj):
+        return obj.memo.id
 
 
 class MemoSerializer(serializers.ModelSerializer):
     images = serializers.SerializerMethodField(allow_null=True)
     tag_name = serializers.SerializerMethodField()
     tag_color = serializers.SerializerMethodField()
+    tag_id = serializers.SerializerMethodField()
 
     def get_images(self, obj):
         image = obj.image_set.all()
@@ -62,7 +72,7 @@ class MemoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text', 'url', 'tag', 'tag_name', 'tag_color', 'images', 'is_marked',
+        fields = ['id', 'memo_text', 'url', 'tag_id', 'tag_name', 'tag_color', 'images', 'is_marked', 'timestamp',
                   'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
@@ -73,26 +83,24 @@ class MemoSerializer(serializers.ModelSerializer):
         if obj.tag:
             return obj.tag.tag_color
 
-    # def create(self, validated_data):
-    #     instance = Memo.objects.create(**validated_data)
-    #     images_data = self.context['request'].FILES
-    #     if images_data is not None:
-    #         for images_data in images_data.getlist('image'):
-    #             Image.objects.create(memo=instance, image=images_data)
-    #     return instance
+    def get_tag_id(self, obj):
+        if obj.tag:
+            print(obj.tag)
+            return obj.tag.id
+        else:
+            return None
 
 
 class TagSerializer(serializers.ModelSerializer):
-    # memos = serializers.SerializerMethodField('get_memos_serializer')
-    #
-    # def get_memos_serializer(self, obj):
-    #     memos = Memo.objects.filter(tag=obj, user=self.context.get('user'))
-    #     serializer = MemoSerializer(memos, many=True, context=self.context)
-    #     return serializer.data
+    user_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Tag
-        fields = ['id', 'tag_name', 'tag_color', 'user', 'created_at', 'updated_at']
+        fields = ['id', 'tag_name', 'tag_color', 'user_id', 'created_at', 'updated_at']
+
+    def get_user_id(self, obj):
+        return obj.user.id
+
 
 
 class UserSerializer(serializers.ModelSerializer):
