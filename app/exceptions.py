@@ -5,3 +5,6 @@ class UserIsAnonymous(Exception):
 
 class UserIsNotOwner(Exception):
     pass
+
+class SizeIntegerError(Exception):
+    pass
