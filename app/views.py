@@ -1,6 +1,8 @@
 import json
 from itertools import chain
 
+from django.db.models import Q
+
 import requests
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -44,6 +46,22 @@ def ownership_check(user1, user2):
         raise UserIsNotOwner
 
 
+def size_check(size):
+    if size <= 0:
+        raise SizeIntegerError
+
+
+def set_has_image_true(memo_id):
+    memo = get_object_or_404(Memo, pk=memo_id)
+    memo.has_image = True
+    memo.save()
+
+def set_has_image_false(memo_id):
+    memo = get_object_or_404(Memo, pk=memo_id)
+    memo.has_image = False
+    memo.save()
+
+
 def get_extension(image_name):
     splited_name = image_name.split('.')
     return '.' + splited_name[len(splited_name) - 1]
@@ -64,6 +82,13 @@ def get_image_data(user_id, memo_id, resource_url, filename):
         "url": resource_url,
         "name": filename
     }
+
+
+def param_exists(request, param):
+    param = request.GET.get(param, 'false')
+    if param == 'false':
+        return False
+    return True
 
 
 # /hello
