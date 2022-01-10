@@ -165,19 +165,14 @@ class KakaoLoginView(APIView):
 
 # /images
 class ImagesView(APIView):
+    # 유저가 가진 모든 이미지 조회
     def get(self, request):
         try:
             user_authenticate(request)
             image_id = request.GET.get('id', None)
-            many = False
-            if image_id is None:
-                many = True
-                image = Image.objects.filter(user=request.user)
-            else:
-                image = get_object_or_404(Image, pk=image_id)
-                ownership_check(request.user, image.user)
-            image_data = ImageSerializer(image, many=many).data
-            return JsonResponse({"message": "이미지 조회 성공", "data": image_data}, status=200)
+            image = Image.objects.filter(user=request.user)
+            serializer = ImageSerializer(image, many=True)
+            return JsonResponse({"message": "이미지 조회 성공", "data": serializer.data}, status=200)
         except UserIsAnonymous:
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
@@ -188,7 +183,9 @@ class ImagesView(APIView):
             user_authenticate(request)
             user = request.user
             size = int(request.data['size'])
-            memo_id = request.data['memo_id']
+            size_check(size)
+            memo_id = request.data.get('memo_id', None)
+            set_has_image_true(memo_id)
             ret = []
             for index in range(size):
                 hash = get_random_hash(length=30)
@@ -208,6 +205,8 @@ class ImagesView(APIView):
             return JsonResponse({"message": "이미지 업로드 성공", "data": ret}, status=200)
         except UserIsAnonymous:
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except SizeIntegerError:
+            return JsonResponse({"message": "Size가 정수가 아니거나, 1보다 작은 수 입니다."}, status=400)
 
     def delete(self, request):
         try:
@@ -215,6 +214,7 @@ class ImagesView(APIView):
             image_id = request.GET.get('id', None)
             image = get_object_or_404(Image, pk=image_id)
             ownership_check(request.user, image.user)
+            set_has_image_false(image.memo.id)
             image.delete()
             s3_delete_image(image)
             return JsonResponse({"message": "이미지 삭제 성공"}, status=200)
@@ -222,6 +222,27 @@ class ImagesView(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+
+
+class ImageDetailView(APIView):
+    def get(self, request, pk):
+        try:
+            user_authenticate(request)
+            image_id = pk
+            many = False
+            if image_id is None:
+                many = True
+                image = Image.objects.filter(user=request.user)
+            else:
+                image = get_object_or_404(Image, pk=image_id)
+                ownership_check(request.user, image.user)
+            image_data = ImageSerializer(image, many=many).data
+            return JsonResponse({"message": "이미지 조회 성공", "data": image_data}, status=200)
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except UserIsNotOwner:
+            return JsonResponse({"message": "권한이 없습니다."}, status=400)
+
 
 
 class BookmarkView(APIView, PaginationHandlerMixin):
