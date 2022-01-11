@@ -18,7 +18,7 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 
 
 class TokenSerializer(TokenObtainPairSerializer):
-    kakao_email = serializers.EmailField(write_only=True, required=False)
+    kakao_email = serializers.EmailField(write_only=True, required=False, allow_null=True)
     nickname = serializers.CharField(write_only=True, required=False)
     kakao_id = serializers.CharField()
 
