@@ -428,8 +428,7 @@ class TagList(APIView):
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         tag = Tag.objects.create(user=user, tag_name=request.data['tag_name'], tag_color=request.data['tag_color'])
-        tags = Tag.objects.filter(user=user).order_by('-created_at')
-        serializer = TagSerializer(tags, many=True)
+        serializer = TagSerializer(tag)
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
 
 
