@@ -57,18 +57,25 @@ class TokenSerializer(TokenObtainPairSerializer):
 
 
 class ImageSerializer(serializers.ModelSerializer):
-    memo_id = serializers.SerializerMethodField()
-    user_id = serializers.SerializerMethodField()
+    memo_id = serializers.ReadOnlyField(source='memo.id')
+    user_id = serializers.ReadOnlyField(source='user.id')
 
     class Meta:
         model = Image
-        fields = ['id', 'url', 'name', 'user_id', 'memo_id']
+        fields = '__all__'
+        extra_kwargs = {
+            'memo': {
+                'write_only': True
+            },
+            'user': {
+                'write_only': True
+            },
+            'file': {
+                'write_only': True,
+                'required': False
+            }
+        }
 
-    def get_user_id(self, obj):
-        return obj.user.id
-
-    def get_memo_id(self, obj):
-        return obj.memo.id
 
 class DynamicMemoSerializer(DynamicFieldsModelSerializer):
     class Meta:
@@ -117,11 +124,9 @@ class TagSerializer(serializers.ModelSerializer):
         return obj.user.id
 
 
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'kakao_id', 'kakao_email', 'nickname',
                   'is_active', 'is_superuser', 'created_at', 'updated_at',
                   'last_login', 'created_at']
-
