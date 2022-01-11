@@ -28,6 +28,16 @@ from app.exceptions import *
 from server.settings.base import env
 
 
+def validate_kakao_response(kakao_response):
+    kakao_id = kakao_response.get('id', None)
+    kakao_account = kakao_response.get('kakao_account', None)
+    kakao_profile = kakao_account.get('profile', None)
+    kakao_nickname = kakao_profile.get('nickname', None)
+    if kakao_id is None or kakao_account is None\
+            or kakao_profile is None or kakao_nickname is None:
+        raise KakaoResponseError
+
+
 def get_random_hash(length):
     string_pool = string.ascii_letters + string.digits
     result = ""
@@ -142,33 +152,39 @@ class UserView(APIView):
 class KakaoLoginView(APIView):
     # 카카오 회원가입+로그인
     def post(self, request):
-        data = JSONParser().parse(request)
-        kakao_access_token = data.get('kakao_access_token', None)
-        kakao_auth_url = "https://kapi.kakao.com/v2/user/me"
-        headers = {
-            "Authorization": f"Bearer {kakao_access_token}",
-            "Content-type": "application/x-www-form-urlencoded; charset=utf-8"
-        }
-        kakao_response = requests.post(kakao_auth_url, headers=headers)
-        kakao_response = json.loads(kakao_response.text)
+        try:
+            data = JSONParser().parse(request)
+            kakao_access_token = data.get('kakao_access_token', None)
+            kakao_auth_url = "https://kapi.kakao.com/v2/user/me"
+            headers = {
+                "Authorization": f"Bearer {kakao_access_token}",
+                "Content-type": "application/x-www-form-urlencoded; charset=utf-8"
+            }
+            kakao_response = requests.post(kakao_auth_url, headers=headers)
+            kakao_response = json.loads(kakao_response.text)
 
-        kakao_id = str(kakao_response.get('id', None))
-        kakao_account = kakao_response.get('kakao_account', None)
-        kakao_email = kakao_account.get('email', None)
-        nickname = kakao_account.get('profile', None).get('nickname', None)
+            validate_kakao_response(kakao_response)
 
-        user_data = {
-            "kakao_id": kakao_id,
-            "kakao_email": kakao_email,
-            "nickname": nickname,
-        }
+            kakao_id = str(kakao_response.get('id'))
+            kakao_account = kakao_response.get('kakao_account')
 
-        serializer = TokenSerializer(data=user_data)
-        if serializer.is_valid():
-            return Response({"message": "로그인 성공", "data": serializer.data}, status=200)
-        else:
-            print(serializer.errors)
-        return JsonResponse({"message": "로그인 실패"}, status=400)
+            kakao_email = kakao_account.get('email', None)
+            nickname = kakao_account.get('profile', None).get('nickname', None)
+
+            user_data = {
+                "kakao_id": kakao_id,
+                "kakao_email": kakao_email,
+                "nickname": nickname,
+            }
+
+            serializer = TokenSerializer(data=user_data)
+            if serializer.is_valid():
+                return Response({"message": "로그인 성공", "data": serializer.data}, status=200)
+            else:
+                print(serializer.errors)
+            return JsonResponse({"message": "CHATMINDER_SERVER_ERROR", "status": "400"}, status=400)
+        except KakaoResponseError:
+            return JsonResponse({"message": "KAKAO_RESPONSE_ERROR", "status": "400"}, status=400)
 
 
 # /images
