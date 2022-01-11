@@ -8,3 +8,6 @@ class UserIsNotOwner(Exception):
 
 class SizeIntegerError(Exception):
     pass
+
+class KakaoResponseError(Exception):
+    pass
