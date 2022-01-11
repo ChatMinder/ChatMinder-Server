@@ -278,7 +278,7 @@ class MemoList(APIView, PaginationHandlerMixin):
     def get(self, request, *args, **kwargs):
         try:
             user_authenticate(request)
-            memos = Memo.objects.filter(user=request.user).order_by('-created_at')
+            memos = Memo.objects.filter(user=request.user).order_by('created_at')
             # page = self.paginate_queryset(memos)
             # if page is not None:
             #     serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
@@ -368,7 +368,7 @@ class MemoTextFilter(APIView):
         user = request.user
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
-        queryset = Memo.objects.filter(memo_text__isnull=False, user=user).order_by('-created_at')
+        queryset = Memo.objects.filter(memo_text__isnull=False, user=user).order_by('created_at')
         # self.paginator.page_size_query_param = "page_size"
         # page = self.paginate_queryset(queryset)
         # if page is not None:
@@ -385,7 +385,7 @@ class MemoLinkFilter(APIView):
         user = request.user
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
-        queryset = Memo.objects.filter(url__isnull=False, user=user).order_by('-created_at')
+        queryset = Memo.objects.filter(url__isnull=False, user=user).order_by('created_at')
         # self.paginator.page_size_query_param = "page_size"
         # page = self.paginate_queryset(queryset)
         # if page is not None:
@@ -402,7 +402,7 @@ class MemoTagFilter(APIView):
         user = request.user
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
-        queryset = Memo.objects.filter(tag_id=pk, user=user).order_by('-created_at')
+        queryset = Memo.objects.filter(tag_id=pk, user=user).order_by('created_at')
         # self.paginator.page_size_query_param = "page_size"
         # page = self.paginate_queryset(queryset)
         # if page is not None:
@@ -419,7 +419,7 @@ class TagList(APIView):
         user = request.user
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
-        tags = Tag.objects.filter(user=user).order_by('-created_at')
+        tags = Tag.objects.filter(user=user).order_by('created_at')
         serializer = TagSerializer(tags, many=True, context={'user': request.user})
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
