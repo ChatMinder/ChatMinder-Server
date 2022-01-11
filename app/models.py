@@ -60,6 +60,7 @@ class Memo(BaseModel):
     timestamp = models.CharField(max_length=50)
     tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True, related_name='memo_tag')
     user = models.ForeignKey('User', on_delete=models.CASCADE,  null=True, related_name='memo_user')
+    has_image = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'memo'
