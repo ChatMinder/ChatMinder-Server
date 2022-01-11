@@ -261,9 +261,9 @@ class BookmarkView(APIView):
         memo = Memo.objects.get(id=request.data['memo_id'], user=user)
         print(memo)
         if request.data['is_marked']:
-            memo.is_marked = True
-        else:
             memo.is_marked = False
+        else:
+            memo.is_marked = True
         memo.save()
         # memos = Memo.objects.filter(user=user).order_by('-created_at')
         # page = self.paginate_queryset(memos)
@@ -430,9 +430,8 @@ class TagList(APIView):
         user = request.user
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
-        Tag.objects.create(user=user, tag_name=request.data['tag_name'], tag_color=request.data['tag_color'])
-        tags = Tag.objects.filter(user=user).order_by('-created_at')
-        serializer = TagSerializer(tags, many=True)
+        tag = Tag.objects.create(user=user, tag_name=request.data['tag_name'], tag_color=request.data['tag_color'])
+        serializer = TagSerializer(tag)
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
 
 
