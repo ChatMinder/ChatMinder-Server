@@ -224,6 +224,8 @@ class ImagesView(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def post(self, request):
         try:
@@ -249,6 +251,8 @@ class ImagesView(APIView):
             return JsonResponse({"message": "Size가 정수가 아니거나, 1보다 작은 수 입니다."}, status=400)
         except KeyError:
             return JsonResponse({"message": "값이 유효하지 않습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def delete(self, request):
         try:
@@ -264,6 +268,8 @@ class ImagesView(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
 
 class ImageDetailView(APIView):
@@ -284,6 +290,8 @@ class ImageDetailView(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
 
 # /memos/bookmark
@@ -329,6 +337,8 @@ class MemoList(APIView, PaginationHandlerMixin):
             return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
         except UserIsAnonymous:
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -389,6 +399,8 @@ class MemoDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def delete(self, request, pk):
         try:
@@ -401,6 +413,8 @@ class MemoDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
 
 # /memos/texts
@@ -525,6 +539,8 @@ class TagDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def patch(self, request, pk):
         try:
@@ -540,6 +556,8 @@ class TagDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def delete(self, request, pk):
         try:
@@ -552,3 +570,5 @@ class TagDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
