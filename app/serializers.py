@@ -113,7 +113,31 @@ class MemoSerializer(DynamicFieldsModelSerializer):
 
     def get_tag_id(self, obj):
         if obj.tag:
-            print(obj.tag)
+            return obj.tag.id
+        else:
+            return None
+
+
+class MemoLinkSerializer(serializers.ModelSerializer):
+    tag_name = serializers.SerializerMethodField()
+    tag_color = serializers.SerializerMethodField()
+    tag_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Memo
+        fields = ['id', 'memo_text', 'url', 'tag_id', 'tag_name', 'tag_color', 'is_marked', 'timestamp',
+                  'has_image', 'created_at', 'updated_at']
+
+    def get_tag_name(self, obj):
+        if obj.tag:
+            return obj.tag.tag_name
+
+    def get_tag_color(self, obj):
+        if obj.tag:
+            return obj.tag.tag_color
+
+    def get_tag_id(self, obj):
+        if obj.tag:
             return obj.tag.id
         else:
             return None
