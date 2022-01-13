@@ -88,7 +88,7 @@ class DynamicMemoSerializer(DynamicFieldsModelSerializer):
         fields = '__all__'
 
 
-class MemoSerializer(serializers.ModelSerializer):
+class MemoSerializer(DynamicFieldsModelSerializer):
     images = serializers.SerializerMethodField(allow_null=True)
     tag_name = serializers.SerializerMethodField()
     tag_color = serializers.SerializerMethodField()
@@ -101,7 +101,7 @@ class MemoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Memo
         fields = ['id', 'memo_text', 'url', 'tag_id', 'tag_name', 'tag_color', 'images', 'is_marked', 'timestamp',
-                  'created_at', 'updated_at']
+                  'has_image', 'created_at', 'updated_at']
 
     def get_tag_name(self, obj):
         if obj.tag:
