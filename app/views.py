@@ -15,6 +15,9 @@ from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework.exceptions import ParseError
 
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet
@@ -33,7 +36,7 @@ def validate_kakao_response(kakao_response):
     kakao_account = kakao_response.get('kakao_account', None)
     kakao_profile = kakao_account.get('profile', None)
     kakao_nickname = kakao_profile.get('nickname', None)
-    if kakao_id is None or kakao_account is None\
+    if kakao_id is None or kakao_account is None \
             or kakao_profile is None or kakao_nickname is None:
         raise KakaoResponseError
 
@@ -146,6 +149,26 @@ class UserView(APIView):
         if serializer.is_valid():
             return Response(serializer.data, status=200)
         return Response(serializer.errors, status=400)
+
+
+# /auth/token
+class TokenView(APIView):
+    def post(self, request):
+        try:
+            data = JSONParser().parse(request)
+            data = {
+                "refresh": data['refresh_token']
+            }
+            serializer = TokenRefreshSerializer(data=data)
+            if serializer.is_valid():
+                return JsonResponse({"status": 201, "refresh_token": serializer.data['refresh'],
+                                     "access_token": serializer.data['access']}, status=201)
+        except AssertionError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_NOT_VALID", "status": 400}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
+        except (KeyError, ParseError):
+            return JsonResponse({"message": "JSON_BODY_KEY_ERROR", "status": 400}, status=400)
 
 
 # /auth/kakao
