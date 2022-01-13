@@ -202,7 +202,8 @@ class KakaoLoginView(APIView):
 
             serializer = TokenSerializer(data=user_data)
             if serializer.is_valid():
-                return Response({"message": "로그인 성공", "data": serializer.data}, status=200)
+                return Response({"message": "로그인 성공", "status": 200, "refresh_token": serializer.data['refresh'],
+                                 "access_token": serializer.data['access']}, status=200)
             else:
                 print(serializer.errors)
             return JsonResponse({"message": "CHATMINDER_SERVER_ERROR", "status": "400"}, status=400)
