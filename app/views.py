@@ -425,7 +425,7 @@ class MemoTextFilter(APIView):
         user = request.user
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
-        queryset = Memo.objects.filter(memo_text__isnull=False, user=user).order_by('created_at')
+        queryset = Memo.objects.filter(memo_text__isnull=False, url__isnull=True, has_image=False, user=user).order_by('created_at')
         # self.paginator.page_size_query_param = "page_size"
         # page = self.paginate_queryset(queryset)
         # if page is not None:
