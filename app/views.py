@@ -15,6 +15,9 @@ from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework.exceptions import ParseError
 
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.viewsets import ModelViewSet
@@ -33,7 +36,7 @@ def validate_kakao_response(kakao_response):
     kakao_account = kakao_response.get('kakao_account', None)
     kakao_profile = kakao_account.get('profile', None)
     kakao_nickname = kakao_profile.get('nickname', None)
-    if kakao_id is None or kakao_account is None\
+    if kakao_id is None or kakao_account is None \
             or kakao_profile is None or kakao_nickname is None:
         raise KakaoResponseError
 
@@ -148,6 +151,26 @@ class UserView(APIView):
         return Response(serializer.errors, status=400)
 
 
+# /auth/token
+class TokenView(APIView):
+    def post(self, request):
+        try:
+            data = JSONParser().parse(request)
+            data = {
+                "refresh": data['refresh_token']
+            }
+            serializer = TokenRefreshSerializer(data=data)
+            if serializer.is_valid():
+                return JsonResponse({"status": 201, "refresh_token": serializer.data['refresh'],
+                                     "access_token": serializer.data['access']}, status=201)
+        except AssertionError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_NOT_VALID", "status": 400}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
+        except (KeyError, ParseError):
+            return JsonResponse({"message": "JSON_BODY_KEY_ERROR", "status": 400}, status=400)
+
+
 # /auth/kakao
 class KakaoLoginView(APIView):
     # 카카오 회원가입+로그인
@@ -179,7 +202,8 @@ class KakaoLoginView(APIView):
 
             serializer = TokenSerializer(data=user_data)
             if serializer.is_valid():
-                return Response({"message": "로그인 성공", "data": serializer.data}, status=200)
+                return Response({"message": "로그인 성공", "status": 200, "refresh_token": serializer.data['refresh'],
+                                 "access_token": serializer.data['access']}, status=200)
             else:
                 print(serializer.errors)
             return JsonResponse({"message": "CHATMINDER_SERVER_ERROR", "status": "400"}, status=400)
@@ -201,6 +225,8 @@ class ImagesView(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def post(self, request):
         try:
@@ -226,6 +252,8 @@ class ImagesView(APIView):
             return JsonResponse({"message": "Size가 정수가 아니거나, 1보다 작은 수 입니다."}, status=400)
         except KeyError:
             return JsonResponse({"message": "값이 유효하지 않습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def delete(self, request):
         try:
@@ -241,6 +269,8 @@ class ImagesView(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
 
 class ImageDetailView(APIView):
@@ -261,6 +291,8 @@ class ImageDetailView(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
 
 # /memos/bookmark
@@ -306,6 +338,8 @@ class MemoList(APIView, PaginationHandlerMixin):
             return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
         except UserIsAnonymous:
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -366,6 +400,8 @@ class MemoDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def delete(self, request, pk):
         try:
@@ -378,6 +414,8 @@ class MemoDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
 
 # /memos/texts
@@ -502,6 +540,8 @@ class TagDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def patch(self, request, pk):
         try:
@@ -517,6 +557,8 @@ class TagDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def delete(self, request, pk):
         try:
@@ -529,3 +571,5 @@ class TagDetail(APIView):
             return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except UserIsNotOwner:
             return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        except TokenError:
+            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
