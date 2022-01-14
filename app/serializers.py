@@ -113,7 +113,6 @@ class MemoSerializer(DynamicFieldsModelSerializer):
 
     def get_tag_id(self, obj):
         if obj.tag:
-            print(obj.tag)
             return obj.tag.id
         else:
             return None
