@@ -99,7 +99,7 @@ def param_exists(request, param):
 
 def get_image_data(request, index):
     hash = get_random_hash(length=30)
-    memo_id = int(request.data.get('memo_id', -1))
+    memo_id = request.data.get('memo_id', -1)
     image_key = "image" + str(index)
     image_file = request.FILES[image_key]
     image_name = image_file.name
@@ -207,7 +207,6 @@ class ImagesView(UserAuthMixin, APIView):
     # 유저가 가진 모든 이미지 조회
     def get(self, request):
         user_authenticate(request)
-        image_id = request.GET.get('id', None)
         image = Image.objects.filter(user=request.user)
         serializer = ImageSerializer(image, many=True)
         return JsonResponse({"message": "이미지 조회 성공", "data": serializer.data}, status=200)
@@ -283,7 +282,6 @@ class BookmarkView(APIView):
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         memo = Memo.objects.get(id=request.data['memo_id'], user=user)
-        print(memo)
         if request.data['is_marked']:
             memo.is_marked = False
         else:
@@ -456,7 +454,7 @@ class TagDetail(UserAuthMixin, APIView):
         has_text = param_exists(request, 'text')
         is_marked = param_exists(request, 'mark')
 
-        fields = ['id', 'tag_id', 'tag_name', 'tag_color', 'is_marked', 'timestamp', 'created_at', 'updated_at']
+        fields = ['id', 'tag_id', 'tag_name', 'tag_color', 'is_marked', 'timestamp']
 
         tag_id = pk
         if tag_id is None:
@@ -485,7 +483,7 @@ class TagDetail(UserAuthMixin, APIView):
             q &= Q(tag_id=tag_id)
 
         filteredMemos = Memo.objects.filter(q).distinct()
-        serializer = DynamicMemoSerializer(filteredMemos, many=True, fields=tuple(fields))
+        serializer = MemoSerializer(filteredMemos, many=True, fields=tuple(fields))
         return JsonResponse({"message": "메모 필터링 성공", "data": serializer.data})
 
     def patch(self, request, pk):
