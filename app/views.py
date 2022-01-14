@@ -463,7 +463,7 @@ class MemoLinkFilter(APIView):
         # if page is not None:
         #     serializer = self.get_serializer(page, many=True)
         #     return self.get_paginated_response(serializer.data)
-        serializer = MemoSerializer(queryset, many=True)
+        serializer = MemoLinkSerializer(queryset, many=True)
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 
