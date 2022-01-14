@@ -27,6 +27,7 @@ from app.serializers import *
 from app.models import User, Memo, Tag, Image
 from app.storages import s3_upload_image, s3_delete_image
 from app.exceptions import *
+from app.mixins import *
 
 from server.settings.base import env
 
@@ -152,81 +153,64 @@ class UserView(APIView):
 
 
 # /auth/token
-class TokenView(APIView):
+class TokenView(UserAuthMixin, APIView):
     def post(self, request):
-        try:
-            data = JSONParser().parse(request)
-            data = {
-                "refresh": data['refresh_token']
-            }
-            serializer = TokenRefreshSerializer(data=data)
-            if serializer.is_valid():
-                return JsonResponse({"status": 201, "refresh_token": serializer.data['refresh'],
-                                     "access_token": serializer.data['access']}, status=201)
-        except AssertionError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_NOT_VALID", "status": 400}, status=400)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
-        except (KeyError, ParseError):
-            return JsonResponse({"message": "JSON_BODY_KEY_ERROR", "status": 400}, status=400)
+        data = JSONParser().parse(request)
+        data = {
+            "refresh": data['refresh_token']
+        }
+        serializer = TokenRefreshSerializer(data=data)
+        if serializer.is_valid():
+            return JsonResponse({"status": 201, "refresh_token": serializer.data['refresh'],
+                                 "access_token": serializer.data['access']}, status=201)
 
 
 # /auth/kakao
-class KakaoLoginView(APIView):
+class KakaoLoginView(UserAuthMixin, APIView):
     # 카카오 회원가입+로그인
     def post(self, request):
-        try:
-            data = JSONParser().parse(request)
-            kakao_access_token = data.get('kakao_access_token', None)
-            kakao_auth_url = "https://kapi.kakao.com/v2/user/me"
-            headers = {
-                "Authorization": f"Bearer {kakao_access_token}",
-                "Content-type": "application/x-www-form-urlencoded; charset=utf-8"
-            }
-            kakao_response = requests.post(kakao_auth_url, headers=headers)
-            kakao_response = json.loads(kakao_response.text)
+        data = JSONParser().parse(request)
+        kakao_access_token = data.get('kakao_access_token', None)
+        kakao_auth_url = "https://kapi.kakao.com/v2/user/me"
+        headers = {
+            "Authorization": f"Bearer {kakao_access_token}",
+            "Content-type": "application/x-www-form-urlencoded; charset=utf-8"
+        }
+        kakao_response = requests.post(kakao_auth_url, headers=headers)
+        kakao_response = json.loads(kakao_response.text)
 
-            validate_kakao_response(kakao_response)
+        validate_kakao_response(kakao_response)
 
-            kakao_id = str(kakao_response.get('id'))
-            kakao_account = kakao_response.get('kakao_account')
+        kakao_id = str(kakao_response.get('id'))
+        kakao_account = kakao_response.get('kakao_account')
 
-            kakao_email = kakao_account.get('email', None)
-            nickname = kakao_account.get('profile', None).get('nickname', None)
+        kakao_email = kakao_account.get('email', None)
+        nickname = kakao_account.get('profile', None).get('nickname', None)
 
-            user_data = {
-                "kakao_id": kakao_id,
-                "kakao_email": kakao_email,
-                "nickname": nickname,
-            }
+        user_data = {
+            "kakao_id": kakao_id,
+            "kakao_email": kakao_email,
+            "nickname": nickname,
+        }
 
-            serializer = TokenSerializer(data=user_data)
-            if serializer.is_valid():
-                return Response({"message": "로그인 성공", "status": 200, "refresh_token": serializer.data['refresh'],
-                                 "access_token": serializer.data['access']}, status=200)
-            else:
-                print(serializer.errors)
-            return JsonResponse({"message": "CHATMINDER_SERVER_ERROR", "status": "400"}, status=400)
-        except KakaoResponseError:
-            return JsonResponse({"message": "KAKAO_RESPONSE_ERROR", "status": "400"}, status=400)
+        serializer = TokenSerializer(data=user_data)
+        if serializer.is_valid():
+            return Response({"message": "로그인 성공", "status": 200, "refresh_token": serializer.data['refresh'],
+                             "access_token": serializer.data['access']}, status=200)
+        else:
+            print(serializer.errors)
+        return JsonResponse({"message": "CHATMINDER_SERVER_ERROR", "status": "400"}, status=400)
 
 
 # /images
-class ImagesView(APIView):
+class ImagesView(UserAuthMixin, APIView):
     # 유저가 가진 모든 이미지 조회
     def get(self, request):
-        try:
-            user_authenticate(request)
-            image_id = request.GET.get('id', None)
-            image = Image.objects.filter(user=request.user)
-            serializer = ImageSerializer(image, many=True)
-            return JsonResponse({"message": "이미지 조회 성공", "data": serializer.data}, status=200)
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-        except UserIsNotOwner:
-            return JsonResponse({"message": "권한이 없습니다."}, status=400)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
+        user_authenticate(request)
+        image_id = request.GET.get('id', None)
+        image = Image.objects.filter(user=request.user)
+        serializer = ImageSerializer(image, many=True)
+        return JsonResponse({"message": "이미지 조회 성공", "data": serializer.data}, status=200)
 
     def post(self, request):
         try:
@@ -246,67 +230,45 @@ class ImagesView(APIView):
                 else:
                     return Response(serializer.errors, status=400)
             return JsonResponse({"message": "이미지 업로드 성공", "data": ret}, status=201)
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
         except SizeIntegerError:
             return JsonResponse({"message": "Size가 정수가 아니거나, 1보다 작은 수 입니다."}, status=400)
         except KeyError:
             return JsonResponse({"message": "값이 유효하지 않습니다."}, status=400)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
     def delete(self, request):
-        try:
-            user_authenticate(request)
-            image_id = request.GET.get('id', None)
+        user_authenticate(request)
+        image_id = request.GET.get('id', None)
+        image = get_object_or_404(Image, pk=image_id)
+        ownership_check(request.user, image.user)
+        set_has_image_false(image.memo.id)
+        image.delete()
+        s3_delete_image(image)
+        return JsonResponse({"message": "이미지 삭제 성공"}, status=200)
+
+
+class ImageDetailView(UserAuthMixin, APIView):
+    def get(self, request, pk):
+        # try:
+        user_authenticate(request)
+        image_id = pk
+        many = False
+        if image_id is None:
+            many = True
+            image = Image.objects.filter(user=request.user)
+        else:
             image = get_object_or_404(Image, pk=image_id)
             ownership_check(request.user, image.user)
-            set_has_image_false(image.memo.id)
-            image.delete()
-            s3_delete_image(image)
-            return JsonResponse({"message": "이미지 삭제 성공"}, status=200)
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-        except UserIsNotOwner:
-            return JsonResponse({"message": "권한이 없습니다."}, status=400)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
-
-
-class ImageDetailView(APIView):
-    def get(self, request, pk):
-        try:
-            user_authenticate(request)
-            image_id = pk
-            many = False
-            if image_id is None:
-                many = True
-                image = Image.objects.filter(user=request.user)
-            else:
-                image = get_object_or_404(Image, pk=image_id)
-                ownership_check(request.user, image.user)
-            image_data = ImageSerializer(image, many=many).data
-            return JsonResponse({"message": "이미지 조회 성공", "data": image_data}, status=200)
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-        except UserIsNotOwner:
-            return JsonResponse({"message": "권한이 없습니다."}, status=400)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
+        image_data = ImageSerializer(image, many=many).data
+        return JsonResponse({"message": "이미지 조회 성공", "data": image_data}, status=200)
 
 
 # /memos/images
-class MemoImageFilter(APIView):
+class MemoImageFilter(UserAuthMixin, APIView):
     def get(self, request):
-        try:
-            user_authenticate(request)
-            queryset = Memo.objects.filter(user=request.user, has_image=True).order_by('created_at')
-            serializer = MemoSerializer(queryset, many=True)
-            return JsonResponse(serializer.data, status=200, safe=False)
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-        except UserIsNotOwner:
-            return JsonResponse({"message": "권한이 없습니다."}, status=400)
+        user_authenticate(request)
+        queryset = Memo.objects.filter(user=request.user, has_image=True).order_by('created_at')
+        serializer = MemoSerializer(queryset, many=True)
+        return JsonResponse(serializer.data, status=200, safe=False)
 
 
 # /memos/bookmark
@@ -337,28 +299,22 @@ class BookmarkView(APIView):
 
 
 # /memos
-class MemoList(APIView, PaginationHandlerMixin):
+class MemoList(UserAuthMixin, APIView, PaginationHandlerMixin):
     # pagination_class = PageNumberPagination
 
     def get(self, request, *args, **kwargs):
-        try:
-            user_authenticate(request)
-            memos = Memo.objects.filter(user=request.user).order_by('created_at')
-            # page = self.paginate_queryset(memos)
-            # if page is not None:
-            #     serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
-            # else:
-            serializer = MemoSerializer(memos, many=True)
-            return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
+        user_authenticate(request)
+        memos = Memo.objects.filter(user=request.user).order_by('created_at')
+        # page = self.paginate_queryset(memos)
+        # if page is not None:
+        #     serializer = self.get_paginated_response(MemoSerializer(page, many=True).data)
+        # else:
+        serializer = MemoSerializer(memos, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
     def post(self, request, *args, **kwargs):
         user = request.user
-        if request.user.is_anonymous:
-            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
+        user_authenticate(request)
         tag_id = request.data.get('tag_id', None)
         tag_name = request.data.get('tag_name', None)
         tag_color = request.data.get('tag_color', None)
@@ -396,49 +352,34 @@ class MemoList(APIView, PaginationHandlerMixin):
 
 
 # /memos/<int:pk>
-class MemoDetail(APIView):
+class MemoDetail(UserAuthMixin, APIView):
     def get_memos(self, pk):
         return get_object_or_404(Memo, pk=pk)
 
     def patch(self, request, pk):
-        try:
-            user_authenticate(request)
-            memo = self.get_memos(pk)
-            ownership_check(request.user, memo.user)
-            serializer = MemoSerializer(memo, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-            return JsonResponse(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-        except UserIsNotOwner:
-            return JsonResponse({"message": "권한이 없습니다."}, status=400)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
+        user_authenticate(request)
+        memo = self.get_memos(pk)
+        ownership_check(request.user, memo.user)
+        serializer = MemoSerializer(memo, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+        return JsonResponse(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        try:
-            user_authenticate(request)
-            memo = self.get_memos(pk)
-            ownership_check(request.user, memo.user)
-            memo.delete()
-            return JsonResponse({"message": "메모 삭제 성공"}, status=status.HTTP_200_OK)
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-        except UserIsNotOwner:
-            return JsonResponse({"message": "권한이 없습니다."}, status=400)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
+        user_authenticate(request)
+        memo = self.get_memos(pk)
+        ownership_check(request.user, memo.user)
+        memo.delete()
+        return JsonResponse({"message": "메모 삭제 성공"}, status=status.HTTP_200_OK)
 
 
 # /memos/texts
-class MemoTextFilter(APIView):
+class MemoTextFilter(UserAuthMixin, APIView):
 
     def get(self, request, *args, **kwargs):
+        user_authenticate(request)
         user = request.user
-        if request.user.is_anonymous:
-            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         queryset = Memo.objects.filter(memo_text__isnull=False, url__isnull=True, has_image=False, user=user).order_by(
             'created_at')
         # self.paginator.page_size_query_param = "page_size"
@@ -451,12 +392,11 @@ class MemoTextFilter(APIView):
 
 
 # /memos/links
-class MemoLinkFilter(APIView):
+class MemoLinkFilter(UserAuthMixin, APIView):
 
     def get(self, request, *args, **kwargs):
+        user_authenticate(request)
         user = request.user
-        if request.user.is_anonymous:
-            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         queryset = Memo.objects.filter(url__isnull=False, user=user).order_by('created_at')
         # self.paginator.page_size_query_param = "page_size"
         # page = self.paginate_queryset(queryset)
@@ -468,12 +408,11 @@ class MemoLinkFilter(APIView):
 
 
 # /tags/<int:pk>/memos
-class MemoTagFilter(APIView):
+class MemoTagFilter(UserAuthMixin, APIView):
 
     def get(self, request, pk):
+        user_authenticate(request)
         user = request.user
-        if request.user.is_anonymous:
-            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         queryset = Memo.objects.filter(tag_id=pk, user=user).order_by('created_at')
         # self.paginator.page_size_query_param = "page_size"
         # page = self.paginate_queryset(queryset)
@@ -485,106 +424,83 @@ class MemoTagFilter(APIView):
 
 
 # /tags
-class TagList(APIView):
+class TagList(UserAuthMixin, APIView):
 
     def get(self, request):
+        user_authenticate(request)
         user = request.user
-        if request.user.is_anonymous:
-            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         tags = Tag.objects.filter(user=user).order_by('created_at')
         serializer = TagSerializer(tags, many=True, context={'user': request.user})
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
     def post(self, request):
+        user_authenticate(request)
         user = request.user
-        if request.user.is_anonymous:
-            return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
         tag = Tag.objects.create(user=user, tag_name=request.data['tag_name'], tag_color=request.data['tag_color'])
         serializer = TagSerializer(tag)
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
 
 
 # /tags/<int:pk>
-class TagDetail(APIView):
+class TagDetail(UserAuthMixin, APIView):
     def get_tag(self, pk):
         return get_object_or_404(Tag, pk=pk)
 
     def get(self, request, pk):
-        try:
-            user_authenticate(request)
-            tag = self.get_tag(pk)
-            ownership_check(request.user, tag.user)
+        user_authenticate(request)
+        tag = self.get_tag(pk)
+        ownership_check(request.user, tag.user)
 
-            has_image = param_exists(request, 'image')
-            has_link = param_exists(request, 'link')
-            has_text = param_exists(request, 'text')
-            is_marked = param_exists(request, 'mark')
+        has_image = param_exists(request, 'image')
+        has_link = param_exists(request, 'link')
+        has_text = param_exists(request, 'text')
+        is_marked = param_exists(request, 'mark')
 
-            fields = ['id', 'tag_id', 'tag_name', 'tag_color', 'is_marked', 'timestamp', 'created_at', 'updated_at']
+        fields = ['id', 'tag_id', 'tag_name', 'tag_color', 'is_marked', 'timestamp', 'created_at', 'updated_at']
 
-            tag_id = pk
-            if tag_id is None:
-                return JsonResponse({"message": "tag id error"}, status=400)
+        tag_id = pk
+        if tag_id is None:
+            return JsonResponse({"message": "tag id error"}, status=400)
 
-            # 아무것도 선택되지 않았을 때
-            if (has_image or has_link or has_text or is_marked) is False:
-                return JsonResponse({"data": []})
+        # 아무것도 선택되지 않았을 때
+        if (has_image or has_link or has_text or is_marked) is False:
+            return JsonResponse({"data": []})
 
-            q = Q()
-            if has_image:
-                q |= Q(tag_id=tag_id, has_image=has_image)
-                fields.append('images')
+        q = Q()
+        if has_image:
+            q |= Q(tag_id=tag_id, has_image=has_image)
+            fields.append('images')
 
-            if has_link:
-                q |= Q(tag_id=tag_id, url__isnull=False)
-                fields.append('url')
+        if has_link:
+            q |= Q(tag_id=tag_id, url__isnull=False)
+            fields.append('url')
 
-            if has_text:
-                q |= Q(tag_id=tag_id, memo_text__isnull=False)
-                fields.append('memo_text')
+        if has_text:
+            q |= Q(tag_id=tag_id, memo_text__isnull=False)
+            fields.append('memo_text')
 
-            if is_marked:
-                q &= Q(tag_id=tag_id, is_marked=True)
-            else:
-                q &= Q(tag_id=tag_id)
+        if is_marked:
+            q &= Q(tag_id=tag_id, is_marked=True)
+        else:
+            q &= Q(tag_id=tag_id)
 
-            filteredMemos = Memo.objects.filter(q).distinct()
-            serializer = DynamicMemoSerializer(filteredMemos, many=True, fields=tuple(fields))
-            return JsonResponse({"message": "메모 필터링 성공", "data": serializer.data})
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-        except UserIsNotOwner:
-            return JsonResponse({"message": "권한이 없습니다."}, status=400)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
+        filteredMemos = Memo.objects.filter(q).distinct()
+        serializer = DynamicMemoSerializer(filteredMemos, many=True, fields=tuple(fields))
+        return JsonResponse({"message": "메모 필터링 성공", "data": serializer.data})
 
     def patch(self, request, pk):
-        try:
-            user_authenticate(request)
-            tag = self.get_tag(pk)
-            ownership_check(request.user, tag.user)
-            serializer = TagSerializer(tag, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-            return JsonResponse(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-        except UserIsNotOwner:
-            return JsonResponse({"message": "권한이 없습니다."}, status=400)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
+        user_authenticate(request)
+        tag = self.get_tag(pk)
+        ownership_check(request.user, tag.user)
+        serializer = TagSerializer(tag, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+        return JsonResponse(serializer.errors, tatus=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        try:
-            user_authenticate(request)
-            tag = self.get_tag(pk)
-            ownership_check(request.user, tag.user)
-            tag.delete()
-            return JsonResponse({"message": "태그 삭제 성공"}, status=status.HTTP_200_OK)
-        except UserIsAnonymous:
-            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
-        except UserIsNotOwner:
-            return JsonResponse({"message": "권한이 없습니다."}, status=400)
-        except TokenError:
-            return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
+        user_authenticate(request)
+        tag = self.get_tag(pk)
+        ownership_check(request.user, tag.user)
+        tag.delete()
+        return JsonResponse({"message": "태그 삭제 성공"}, status=status.HTTP_200_OK)
