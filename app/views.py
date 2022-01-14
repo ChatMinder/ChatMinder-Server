@@ -295,6 +295,20 @@ class ImageDetailView(APIView):
             return JsonResponse({"message": "REFRESH_TOKEN_IS_EXPIRED_OR_INVALID", "status": 401}, status=401)
 
 
+# /memos/images
+class MemoImageFilter(APIView):
+    def get(self, request):
+        try:
+            user_authenticate(request)
+            queryset = Memo.objects.filter(user=request.user, has_image=True).order_by('created_at')
+            serializer = MemoSerializer(queryset, many=True)
+            return JsonResponse(serializer.data, status=200, safe=False)
+        except UserIsAnonymous:
+            return JsonResponse({"message": "알 수 없는 유저입니다."}, status=404)
+        except UserIsNotOwner:
+            return JsonResponse({"message": "권한이 없습니다."}, status=400)
+
+
 # /memos/bookmark
 class BookmarkView(APIView):
     # pagination_class = PageNumberPagination
@@ -425,7 +439,8 @@ class MemoTextFilter(APIView):
         user = request.user
         if request.user.is_anonymous:
             return JsonResponse({'message': '알 수 없는 유저입니다.'}, status=404)
-        queryset = Memo.objects.filter(memo_text__isnull=False, url__isnull=True, has_image=False, user=user).order_by('created_at')
+        queryset = Memo.objects.filter(memo_text__isnull=False, url__isnull=True, has_image=False, user=user).order_by(
+            'created_at')
         # self.paginator.page_size_query_param = "page_size"
         # page = self.paginate_queryset(queryset)
         # if page is not None:
