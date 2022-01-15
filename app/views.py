@@ -171,6 +171,7 @@ class KakaoLoginView(UserAuthMixin, APIView):
     def post(self, request):
         data = JSONParser().parse(request)
         kakao_access_token = data.get('kakao_access_token', None)
+        timestamp = data.get('timestamp', None)
         kakao_auth_url = "https://kapi.kakao.com/v2/user/me"
         headers = {
             "Authorization": f"Bearer {kakao_access_token}",
@@ -191,6 +192,7 @@ class KakaoLoginView(UserAuthMixin, APIView):
             "kakao_id": kakao_id,
             "kakao_email": kakao_email,
             "nickname": nickname,
+            "timestamp": timestamp
         }
 
         serializer = TokenSerializer(data=user_data)
