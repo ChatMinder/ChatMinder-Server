@@ -504,3 +504,18 @@ class TagDetail(UserAuthMixin, APIView):
         ownership_check(request.user, tag.user)
         tag.delete()
         return JsonResponse({"message": "태그 삭제 성공"}, status=status.HTTP_200_OK)
+
+
+# /memos/tags
+class MemoTag(UserAuthMixin, APIView):
+
+    def post(self, request):
+        user_authenticate(request)
+        memo_id = request.data.get('memo_id', None)
+        tag_id = request.data.get('tag_id', None)
+        memo = Memo.objects.get(id=memo_id)
+        ownership_check(request.user, memo.user)
+        memo.tag_id = tag_id
+        memo.save()
+        serializer = MemoSerializer(memo)
+        return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)
