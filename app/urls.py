@@ -3,7 +3,7 @@ from django.urls import include, path
 from rest_framework import routers
 
 from app.views import HelloView, KakaoLoginView, ImagesView, UserView, BookmarkView, TagList, TagDetail, MemoTextFilter, \
-    MemoLinkFilter, MemoTagFilter, TokenView
+    MemoLinkFilter, MemoTagFilter, TokenView, MemoImageFilter
 
 from app.views import MemoList, MemoDetail
 from server.settings import base
@@ -17,6 +17,7 @@ urlpatterns = [
     path('memos/bookmark', BookmarkView.as_view()),
     path('memos/texts', MemoTextFilter.as_view()),
     path('memos/links', MemoLinkFilter.as_view()),
+    path('memos/images', MemoImageFilter.as_view()),
     path('tags/<int:pk>/memos', MemoTagFilter.as_view()),
     path('images', ImagesView.as_view()),
     path('users', UserView.as_view()),

@@ -57,12 +57,13 @@ class TokenSerializer(TokenObtainPairSerializer):
 
 
 class ImageSerializer(serializers.ModelSerializer):
-    memo_id = serializers.ReadOnlyField(source='memo.id')
-    user_id = serializers.ReadOnlyField(source='user.id')
+    # memo_id = serializers.ReadOnlyField(source='memo.id')
+    # user_id = serializers.ReadOnlyField(source='user.id')
 
     class Meta:
         model = Image
-        fields = '__all__'
+        # fields = '__all__'
+        fields = ['memo', 'user', 'url']
         extra_kwargs = {
             'memo': {
                 'write_only': True
@@ -70,22 +71,11 @@ class ImageSerializer(serializers.ModelSerializer):
             'user': {
                 'write_only': True
             },
-            'file': {
-                'write_only': True,
-                'required': False
-            }
+            # 'file': {
+            #     'write_only': True,
+            #     'required': False
+            # }
         }
-
-
-class DynamicMemoSerializer(DynamicFieldsModelSerializer):
-    class Meta:
-        model = Memo
-        fields = '__all__'
-
-class DynamicMemoSerializer(DynamicFieldsModelSerializer):
-    class Meta:
-        model = Memo
-        fields = '__all__'
 
 
 class MemoSerializer(DynamicFieldsModelSerializer):
@@ -100,8 +90,7 @@ class MemoSerializer(DynamicFieldsModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text', 'url', 'tag_id', 'tag_name', 'tag_color', 'images', 'is_marked', 'timestamp',
-                  'has_image', 'created_at', 'updated_at']
+        fields = ['id', 'memo_text', 'url', 'tag_id', 'tag_name', 'tag_color', 'images', 'is_marked', 'timestamp']
 
     def get_tag_name(self, obj):
         if obj.tag:
@@ -125,8 +114,7 @@ class MemoLinkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text', 'url', 'tag_id', 'tag_name', 'tag_color', 'is_marked', 'timestamp',
-                  'has_image', 'created_at', 'updated_at']
+        fields = ['id', 'memo_text', 'url', 'tag_id', 'tag_name', 'tag_color', 'is_marked', 'timestamp']
 
     def get_tag_name(self, obj):
         if obj.tag:
@@ -148,7 +136,7 @@ class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
-        fields = ['id', 'tag_name', 'tag_color', 'user_id', 'created_at', 'updated_at']
+        fields = ['id', 'tag_name', 'tag_color', 'user_id']
 
     def get_user_id(self, obj):
         return obj.user.id
@@ -158,5 +146,4 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'kakao_id', 'kakao_email', 'nickname',
-                  'is_active', 'is_superuser', 'created_at', 'updated_at',
-                  'last_login', 'created_at']
+                  'is_active', 'is_superuser', 'last_login']
