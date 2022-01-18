@@ -423,6 +423,17 @@ class MemoTagFilter(UserAuthMixin, APIView):
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 
+# /tags/default/memos
+class TagDefaultFilter(UserAuthMixin, APIView):
+
+    def get(self, request):
+        user_authenticate(request)
+        user = request.user
+        queryset = Memo.objects.filter(tag_id__isnull=True, user=user).order_by('created_at')
+        serializer = MemoSerializer(queryset, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+
+
 # /tags
 class TagList(UserAuthMixin, APIView):
 
