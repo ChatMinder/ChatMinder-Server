@@ -21,6 +21,7 @@ class TokenSerializer(TokenObtainPairSerializer):
     kakao_email = serializers.EmailField(write_only=True, required=False, allow_null=True)
     nickname = serializers.CharField(write_only=True, required=False)
     kakao_id = serializers.CharField()
+    timestamp = serializers.CharField(write_only=True)
 
     access = serializers.CharField(read_only=True)
     refresh = serializers.CharField(read_only=True)
@@ -45,6 +46,18 @@ class TokenSerializer(TokenObtainPairSerializer):
         user.nickname = attrs.get('nickname', None)
         user.is_active = True
         user.save()
+
+        if created:
+            color = '#C8D769'
+            timestamp = attrs.get('timestamp', None)
+            tag = Tag.objects.create(tag_name='태그입력',
+                                     tag_color=color,
+                                     user=user)
+            tag.save()
+            memo = Memo.objects.create(memo_text='첫번째 메모를 작성해 보세요.',
+                                       timestamp=timestamp,
+                                       tag=tag, user=user, is_marked=True)
+            memo.save()
 
         authenticate(username=user.USERNAME_FIELD)
 

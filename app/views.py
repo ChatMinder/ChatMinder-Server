@@ -171,6 +171,7 @@ class KakaoLoginView(UserAuthMixin, APIView):
     def post(self, request):
         data = JSONParser().parse(request)
         kakao_access_token = data.get('kakao_access_token', None)
+        timestamp = data.get('timestamp', None)
         kakao_auth_url = "https://kapi.kakao.com/v2/user/me"
         headers = {
             "Authorization": f"Bearer {kakao_access_token}",
@@ -191,6 +192,7 @@ class KakaoLoginView(UserAuthMixin, APIView):
             "kakao_id": kakao_id,
             "kakao_email": kakao_email,
             "nickname": nickname,
+            "timestamp": timestamp
         }
 
         serializer = TokenSerializer(data=user_data)
@@ -421,6 +423,17 @@ class MemoTagFilter(UserAuthMixin, APIView):
         return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 
+# /tags/default/memos
+class TagDefaultFilter(UserAuthMixin, APIView):
+
+    def get(self, request):
+        user_authenticate(request)
+        user = request.user
+        queryset = Memo.objects.filter(tag_id__isnull=True, user=user).order_by('created_at')
+        serializer = MemoSerializer(queryset, many=True)
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
+
+
 # /tags
 class TagList(UserAuthMixin, APIView):
 
@@ -502,3 +515,18 @@ class TagDetail(UserAuthMixin, APIView):
         ownership_check(request.user, tag.user)
         tag.delete()
         return JsonResponse({"message": "태그 삭제 성공"}, status=status.HTTP_200_OK)
+
+
+# /memos/tags
+class MemoTag(UserAuthMixin, APIView):
+
+    def post(self, request):
+        user_authenticate(request)
+        memo_id = request.data.get('memo_id', None)
+        tag_id = request.data.get('tag_id', None)
+        memo = Memo.objects.get(id=memo_id)
+        ownership_check(request.user, memo.user)
+        memo.tag_id = tag_id
+        memo.save()
+        serializer = MemoSerializer(memo)
+        return JsonResponse(serializer.data, status=status.HTTP_201_CREATED, safe=False)

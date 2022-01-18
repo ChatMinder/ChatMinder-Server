@@ -58,7 +58,7 @@ class Memo(BaseModel):
     url = models.URLField(null=True, blank=True)
     is_marked = models.BooleanField(default=False)
     timestamp = models.CharField(max_length=50)
-    tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True, related_name='memo_tag')
+    tag = models.ForeignKey('Tag', on_delete=models.CASCADE, null=True, blank=True, related_name='memo_tag')
     user = models.ForeignKey('User', on_delete=models.CASCADE,  null=True, related_name='memo_user')
     has_image = models.BooleanField(default=False)
 
