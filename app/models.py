@@ -41,7 +41,7 @@ class Tag(BaseModel):
         ('#B282CC', '#B282CC'),
         ('#F85C5D', '#F85C5D'),
         ('#FFAB41', '#FFAB41'),
-        ('#FFBE6C', '#FFBE6C'),
+        ('#FA7931', '#FA7931'),
         ('#FFD84E', '#FFD84E'),
     ]
 
