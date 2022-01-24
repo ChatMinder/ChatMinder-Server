@@ -59,7 +59,7 @@ class TokenSerializer(TokenObtainPairSerializer):
                                        tag=tag, user=user, is_marked=True)
             memo.save()
 
-        authenticate(username=user.USERNAME_FIELD)
+        authenticate(username=user.USERNAME_FIELD, is_kakao=True)
 
         validated_data = super().validate(attrs)
         refresh = self.get_token(user)
@@ -155,8 +155,55 @@ class TagSerializer(serializers.ModelSerializer):
         return obj.user.id
 
 
+# class UserSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User
+#         fields = ['id', 'kakao_id', 'kakao_email', 'nickname',
+#                   'is_active', 'is_superuser', 'last_login']
+
 class UserSerializer(serializers.ModelSerializer):
+    kakao_id = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'kakao_id', 'kakao_email', 'nickname',
-                  'is_active', 'is_superuser', 'last_login']
+        fields = '__all__'
+
+    def create(self, validated_data):
+        kakao_id = validated_data.get('kakao_id')
+        password = validated_data.get('password')
+        user = User(
+            kakao_id=kakao_id,
+        )
+        user.set_password(password)
+        user.save()
+        return user
+
+class UserTokenSerializer(TokenObtainPairSerializer):
+    kakao_id = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    access = serializers.CharField(read_only=True)
+    refresh = serializers.CharField(read_only=True)
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['kakao_id'] = user.kakao_id
+        token['kakao_email'] = user.kakao_email
+        return token
+
+    def validate(self, attrs):
+        user = User.objects.get(
+            kakao_id=attrs.get('kakao_id', None),
+        )
+        password = attrs.get('password')
+        print(password)
+
+        authenticate(username=user.USERNAME_FIELD, password=password, is_kakao=True)
+        validated_data = super().validate(attrs)
+        refresh = self.get_token(user)
+        validated_data["refresh"] = str(refresh)
+        validated_data["access"] = str(refresh.access_token)
+        validated_data["kakao_id"] = user.kakao_id
+        return validated_data
