@@ -9,6 +9,8 @@ UserModel = get_user_model()
 
 class KakaoBackend(ModelBackend):
     def authenticate(self, request, username=None, password=None, is_kakao=None, **kwargs):
+        logging.WARN(username)
+        logging.WARN(is_kakao)
         if username is None:
             username = kwargs.get(UserModel.USERNAME_FIELD)
         try:

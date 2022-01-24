@@ -1,4 +1,5 @@
 import json
+import logging
 from itertools import chain
 
 from django.db.models import Q
@@ -226,6 +227,9 @@ class KakaoLoginView(UserAuthMixin, APIView):
             "nickname": nickname,
             "timestamp": timestamp
         }
+
+        logging.WARN(nickname)
+        logging.WARN(kakao_id)
 
         serializer = TokenSerializer(data=user_data)
         if serializer.is_valid():
