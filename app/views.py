@@ -152,6 +152,38 @@ class UserView(APIView):
         return Response(serializer.errors, status=400)
 
 
+class SigninView(APIView):
+    # 로그인
+    def post(self, request):
+        data = JSONParser().parse(request)
+        user_data = {
+            "kakao_id": data.get('login_id', None),
+            "password": data.get("password", None)
+        }
+        serializer = UserTokenSerializer(data=user_data)
+        if serializer.is_valid():
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=400)
+
+
+class SignupView(APIView):
+    # 회원가입
+    def post(self, request):
+        data = JSONParser().parse(request)
+        user_data = {
+            "kakao_id": data.get('login_id', None),
+            "kakao_email": data.get('email', None),
+            "nickname": data.get('nickname', None),
+            "timestamp": data.get('timestamp', "1642859875"),
+            "password": data.get("password", None)
+        }
+        serializer = UserSerializer(data=user_data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=400)
+
+
 # /auth/token
 class TokenView(UserAuthMixin, APIView):
     def post(self, request):
