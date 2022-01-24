@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - develop
+      - fix/kakao-login
 
 jobs:
   build:
