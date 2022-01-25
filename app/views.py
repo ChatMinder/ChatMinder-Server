@@ -32,6 +32,11 @@ from app.mixins import *
 
 from server.settings.base import env
 
+def validate_login_data(data):
+    password = data.get('password', None)
+    if (password is None) or (len(password) <= 4):
+        raise TokenError
+
 
 def validate_kakao_response(kakao_response):
     kakao_id = kakao_response.get('id', None)
@@ -157,13 +162,15 @@ class SigninView(APIView):
     # 로그인
     def post(self, request):
         data = JSONParser().parse(request)
+        validate_login_data(data)
         user_data = {
             "kakao_id": data.get('login_id', None),
             "password": data.get("password", None)
         }
         serializer = UserTokenSerializer(data=user_data)
         if serializer.is_valid():
-            return Response(serializer.data, status=200)
+            return JsonResponse({"message": "로그인 성공", "status": 200, "refresh_token": serializer.data['refresh'],
+                             "access_token": serializer.data['access']}, status=200)
         return Response(serializer.errors, status=400)
 
 
