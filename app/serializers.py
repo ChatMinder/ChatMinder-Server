@@ -38,7 +38,7 @@ class TokenSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
-        attrs.update({'password': ''})
+        attrs.update({'password': None})
         user, created = User.objects.get_or_create(
             kakao_id=attrs.get('kakao_id', None),
             kakao_email=attrs.get('kakao_email', None)
@@ -198,9 +198,7 @@ class UserTokenSerializer(TokenObtainPairSerializer):
             kakao_id=attrs.get('kakao_id', None),
         )
         password = attrs.get('password')
-        print(password)
-
-        authenticate(username=user.USERNAME_FIELD, password=password, is_kakao=True)
+        authenticate(username=user.USERNAME_FIELD, password=password)
         validated_data = super().validate(attrs)
         refresh = self.get_token(user)
         validated_data["refresh"] = str(refresh)
