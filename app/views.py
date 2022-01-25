@@ -228,9 +228,6 @@ class KakaoLoginView(UserAuthMixin, APIView):
             "timestamp": timestamp
         }
 
-        logging.WARN(nickname)
-        logging.WARN(kakao_id)
-
         serializer = TokenSerializer(data=user_data)
         if serializer.is_valid():
             return Response({"message": "로그인 성공", "status": 200, "refresh_token": serializer.data['refresh'],
