@@ -38,7 +38,7 @@ class TokenSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
-        attrs.update({'password': ''})
+        attrs.update({'password': None})
         user, created = User.objects.get_or_create(
             kakao_id=attrs.get('kakao_id', None),
             kakao_email=attrs.get('kakao_email', None)
@@ -59,7 +59,7 @@ class TokenSerializer(TokenObtainPairSerializer):
                                        tag=tag, user=user, is_marked=True)
             memo.save()
 
-        authenticate(username=user.USERNAME_FIELD, is_kakao=True)
+        authenticate(username=user.USERNAME_FIELD)
 
         validated_data = super().validate(attrs)
         refresh = self.get_token(user)
@@ -155,12 +155,6 @@ class TagSerializer(serializers.ModelSerializer):
         return obj.user.id
 
 
-# class UserSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = User
-#         fields = ['id', 'kakao_id', 'kakao_email', 'nickname',
-#                   'is_active', 'is_superuser', 'last_login']
-
 class UserSerializer(serializers.ModelSerializer):
     kakao_id = serializers.CharField()
     password = serializers.CharField(write_only=True)
@@ -198,9 +192,7 @@ class UserTokenSerializer(TokenObtainPairSerializer):
             kakao_id=attrs.get('kakao_id', None),
         )
         password = attrs.get('password')
-        print(password)
-
-        authenticate(username=user.USERNAME_FIELD, password=password, is_kakao=True)
+        authenticate(username=user.USERNAME_FIELD, password=password)
         validated_data = super().validate(attrs)
         refresh = self.get_token(user)
         validated_data["refresh"] = str(refresh)
