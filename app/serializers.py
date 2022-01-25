@@ -59,7 +59,7 @@ class TokenSerializer(TokenObtainPairSerializer):
                                        tag=tag, user=user, is_marked=True)
             memo.save()
 
-        authenticate(username=user.USERNAME_FIELD)
+        authenticate(username=user.USERNAME_FIELD, is_kakao=True)
 
         validated_data = super().validate(attrs)
         refresh = self.get_token(user)
@@ -154,6 +154,12 @@ class TagSerializer(serializers.ModelSerializer):
     def get_user_id(self, obj):
         return obj.user.id
 
+
+# class UserSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User
+#         fields = ['id', 'kakao_id', 'kakao_email', 'nickname',
+#                   'is_active', 'is_superuser', 'last_login']
 
 class UserSerializer(serializers.ModelSerializer):
     kakao_id = serializers.CharField()
