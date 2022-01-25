@@ -8,9 +8,7 @@ UserModel = get_user_model()
 
 
 class KakaoBackend(ModelBackend):
-    def authenticate(self, request, username=None, password=None, is_kakao=None, **kwargs):
-        logging.WARN(username)
-        logging.WARN(is_kakao)
+    def authenticate(self, request, username=None, password=None, **kwargs):
         if username is None:
             username = kwargs.get(UserModel.USERNAME_FIELD)
         try:
@@ -18,7 +16,7 @@ class KakaoBackend(ModelBackend):
         except UserModel.DoesNotExist:
             pass
         else:
-            if is_kakao is True:
+            if password is None:
                 if self.user_can_authenticate(user):
                     return user
             else:
