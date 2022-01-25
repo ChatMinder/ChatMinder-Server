@@ -185,6 +185,16 @@ class SignupView(APIView):
         return Response(serializer.errors, status=400)
 
 
+class DuplicateCheckView(APIView):
+    def get(self, request):
+        login_id = request.GET.get('login_id', None)
+        if login_id is None:
+            return JsonResponse(data={}, status=400)
+        user_exists = User.objects.filter(kakao_id=login_id).exists()
+        if user_exists is True:
+            return JsonResponse(data={}, status=409)
+        return JsonResponse(data={}, status=200)
+
 # /auth/token
 class TokenView(UserAuthMixin, APIView):
     def post(self, request):
