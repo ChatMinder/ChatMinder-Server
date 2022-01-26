@@ -167,6 +167,7 @@ class TagSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     kakao_id = serializers.CharField()
     password = serializers.CharField(write_only=True)
+    timestamp = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
