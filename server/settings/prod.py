@@ -77,5 +77,9 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
+        'my': {
+            'handlers': ['file'],
+            'level': 'INFO',
+        }
     }
 }

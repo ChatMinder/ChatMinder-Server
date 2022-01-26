@@ -1,6 +1,7 @@
 import json
 import logging
 from itertools import chain
+import uuid
 
 from django.db.models import Q
 
@@ -31,6 +32,8 @@ from app.exceptions import *
 from app.mixins import *
 
 from server.settings.base import env
+
+server_uuid = uuid.uuid4()
 
 def validate_login_data(data):
     password = data.get('password', None)
@@ -118,11 +121,13 @@ def get_image_data(request, index):
         "file": image_file
     }
 
+logger = logging.getLogger('my')
 
 # /hello
 class HelloView(APIView):
     def get(self, request):
-        return Response("GET Hello", status=200)
+        logger.info("HELLO")
+        return JsonResponse({"message":server_uuid}, status=200)
 
     def post(self, request):
         return Response("POST Hello", status=200)
