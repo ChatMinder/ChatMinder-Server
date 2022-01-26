@@ -26,7 +26,7 @@ services:
     volumes:
       - static:/home/app/web/static
       - media:/home/app/web/media
-      - /etc/letsencrypt/archive/chatminder.app:/etc/nginx/conf.d/certificate
+      - /etc/letsencrypt/archive/chatminder.app-0001:/etc/nginx/conf.d/certificate
       - /home/ubuntu/srv/ubuntu/server/static:/etc/nginx/conf.d/html
     ports:
       - "80:80"
