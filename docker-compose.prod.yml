@@ -38,6 +38,8 @@ services:
     entrypoint:
       - sh
       - config/docker/entrypoint.prod.sh
+    depends_on:
+      - web
   
   web3:
     container_name: web3
@@ -57,6 +59,8 @@ services:
     entrypoint:
       - sh
       - config/docker/entrypoint.prod.sh
+    depends_on:
+      - web2
 
   nginx:
     container_name: nginx
@@ -70,7 +74,7 @@ services:
       - "80:80"
       - "443:443"
     depends_on:
-      - web
+      - web3
 
 
 volumes:
