@@ -70,6 +70,7 @@ services:
       - media:/home/app/web/media
       - /etc/letsencrypt/archive/chatminder.app-0002:/etc/nginx/conf.d/certificate
       - /home/ubuntu/srv/ubuntu/server/static:/etc/nginx/conf.d/html
+      - /home/ubuntu/srv/ubuntu/log:/var/log/nginx
     ports:
       - "80:80"
       - "443:443"
