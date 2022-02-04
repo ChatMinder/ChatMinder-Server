@@ -17,7 +17,7 @@ class BaseModel(Model):
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     kakao_id = models.CharField(max_length=20, unique=True, null=False, blank=False)
     kakao_email = models.EmailField(null=True)
-    password = models.CharField(max_length=20, null=True, blank=True, default="")
+    password = models.CharField(max_length=200, null=True, blank=True, default="")
     is_superuser = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     nickname = models.CharField(max_length=20, null=False, blank=False, default="anonymous")
@@ -41,7 +41,7 @@ class Tag(BaseModel):
         ('#B282CC', '#B282CC'),
         ('#F85C5D', '#F85C5D'),
         ('#FFAB41', '#FFAB41'),
-        ('#FFBE6C', '#FFBE6C'),
+        ('#FA7931', '#FA7931'),
         ('#FFD84E', '#FFD84E'),
     ]
 
@@ -58,7 +58,7 @@ class Memo(BaseModel):
     url = models.URLField(null=True, blank=True)
     is_marked = models.BooleanField(default=False)
     timestamp = models.CharField(max_length=50)
-    tag = models.ForeignKey('Tag', on_delete=models.SET_NULL, null=True, blank=True, related_name='memo_tag')
+    tag = models.ForeignKey('Tag', on_delete=models.CASCADE, null=True, blank=True, related_name='memo_tag')
     user = models.ForeignKey('User', on_delete=models.CASCADE,  null=True, related_name='memo_user')
     has_image = models.BooleanField(default=False)
 

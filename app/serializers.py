@@ -21,6 +21,7 @@ class TokenSerializer(TokenObtainPairSerializer):
     kakao_email = serializers.EmailField(write_only=True, required=False, allow_null=True)
     nickname = serializers.CharField(write_only=True, required=False)
     kakao_id = serializers.CharField()
+    timestamp = serializers.CharField(write_only=True)
 
     access = serializers.CharField(read_only=True)
     refresh = serializers.CharField(read_only=True)
@@ -46,7 +47,19 @@ class TokenSerializer(TokenObtainPairSerializer):
         user.is_active = True
         user.save()
 
-        authenticate(username=user.USERNAME_FIELD)
+        if created:
+            color = '#C8D769'
+            timestamp = attrs.get('timestamp', None)
+            tag = Tag.objects.create(tag_name='태그입력',
+                                     tag_color=color,
+                                     user=user)
+            tag.save()
+            memo = Memo.objects.create(memo_text='첫번째 메모를 작성해 보세요.',
+                                       timestamp=timestamp,
+                                       tag=tag, user=user, is_marked=True)
+            memo.save()
+
+        authenticate(username=user.USERNAME_FIELD, is_kakao=True)
 
         validated_data = super().validate(attrs)
         refresh = self.get_token(user)
@@ -57,12 +70,13 @@ class TokenSerializer(TokenObtainPairSerializer):
 
 
 class ImageSerializer(serializers.ModelSerializer):
-    memo_id = serializers.ReadOnlyField(source='memo.id')
-    user_id = serializers.ReadOnlyField(source='user.id')
+    # memo_id = serializers.ReadOnlyField(source='memo.id')
+    # user_id = serializers.ReadOnlyField(source='user.id')
 
     class Meta:
         model = Image
-        fields = '__all__'
+        # fields = '__all__'
+        fields = ['memo', 'user', 'url']
         extra_kwargs = {
             'memo': {
                 'write_only': True
@@ -70,22 +84,11 @@ class ImageSerializer(serializers.ModelSerializer):
             'user': {
                 'write_only': True
             },
-            'file': {
-                'write_only': True,
-                'required': False
-            }
+            # 'file': {
+            #     'write_only': True,
+            #     'required': False
+            # }
         }
-
-
-class DynamicMemoSerializer(DynamicFieldsModelSerializer):
-    class Meta:
-        model = Memo
-        fields = '__all__'
-
-class DynamicMemoSerializer(DynamicFieldsModelSerializer):
-    class Meta:
-        model = Memo
-        fields = '__all__'
 
 
 class MemoSerializer(DynamicFieldsModelSerializer):
@@ -100,8 +103,7 @@ class MemoSerializer(DynamicFieldsModelSerializer):
 
     class Meta:
         model = Memo
-        fields = ['id', 'memo_text', 'url', 'tag_id', 'tag_name', 'tag_color', 'images', 'is_marked', 'timestamp',
-                  'has_image', 'created_at', 'updated_at']
+        fields = ['id', 'memo_text', 'url', 'tag_id', 'tag_name', 'tag_color', 'images', 'is_marked', 'timestamp']
 
     def get_tag_name(self, obj):
         if obj.tag:
@@ -113,7 +115,30 @@ class MemoSerializer(DynamicFieldsModelSerializer):
 
     def get_tag_id(self, obj):
         if obj.tag:
-            print(obj.tag)
+            return obj.tag.id
+        else:
+            return None
+
+
+class MemoLinkSerializer(serializers.ModelSerializer):
+    tag_name = serializers.SerializerMethodField()
+    tag_color = serializers.SerializerMethodField()
+    tag_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Memo
+        fields = ['id', 'memo_text', 'url', 'tag_id', 'tag_name', 'tag_color', 'is_marked', 'timestamp']
+
+    def get_tag_name(self, obj):
+        if obj.tag:
+            return obj.tag.tag_name
+
+    def get_tag_color(self, obj):
+        if obj.tag:
+            return obj.tag.tag_color
+
+    def get_tag_id(self, obj):
+        if obj.tag:
             return obj.tag.id
         else:
             return None
@@ -124,15 +149,61 @@ class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
-        fields = ['id', 'tag_name', 'tag_color', 'user_id', 'created_at', 'updated_at']
+        fields = ['id', 'tag_name', 'tag_color', 'user_id']
 
     def get_user_id(self, obj):
         return obj.user.id
 
 
+# class UserSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User
+#         fields = ['id', 'kakao_id', 'kakao_email', 'nickname',
+#                   'is_active', 'is_superuser', 'last_login']
+
 class UserSerializer(serializers.ModelSerializer):
+    kakao_id = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'kakao_id', 'kakao_email', 'nickname',
-                  'is_active', 'is_superuser', 'created_at', 'updated_at',
-                  'last_login', 'created_at']
+        fields = '__all__'
+
+    def create(self, validated_data):
+        kakao_id = validated_data.get('kakao_id')
+        password = validated_data.get('password')
+        user = User(
+            kakao_id=kakao_id,
+        )
+        user.set_password(password)
+        user.save()
+        return user
+
+class UserTokenSerializer(TokenObtainPairSerializer):
+    kakao_id = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    access = serializers.CharField(read_only=True)
+    refresh = serializers.CharField(read_only=True)
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['kakao_id'] = user.kakao_id
+        token['kakao_email'] = user.kakao_email
+        return token
+
+    def validate(self, attrs):
+        user = User.objects.get(
+            kakao_id=attrs.get('kakao_id', None),
+        )
+        password = attrs.get('password')
+        print(password)
+
+        authenticate(username=user.USERNAME_FIELD, password=password, is_kakao=True)
+        validated_data = super().validate(attrs)
+        refresh = self.get_token(user)
+        validated_data["refresh"] = str(refresh)
+        validated_data["access"] = str(refresh.access_token)
+        validated_data["kakao_id"] = user.kakao_id
+        return validated_data

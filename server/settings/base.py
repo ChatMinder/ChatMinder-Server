@@ -1,5 +1,4 @@
 import os
-import subprocess
 
 import environ
 import datetime
@@ -69,7 +68,7 @@ WSGI_APPLICATION = 'server.wsgi.application'
 
 AUTHENTICATION_BACKENDS = (
     'app.backends.KakaoBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    # 'django.contrib.auth.backends.ModelBackend',
 )
 
 AUTH_PASSWORD_VALIDATORS = [

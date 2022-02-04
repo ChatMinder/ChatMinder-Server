@@ -1,4 +1,5 @@
 from .base import *
+import subprocess
 
 DEBUG = False
 ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS')
@@ -17,10 +18,8 @@ DATABASES = {
 
 # Log config
 
-LOG_DIR = '/var/log/django'
-if not os.path.exists(LOG_DIR):
-    LOG_DIR = os.path.join(BASE_DIR, '.log')
-    os.makedirs(LOG_DIR, exist_ok=True)
+LOG_DIR = os.path.join(BASE_DIR, 'log')
+os.makedirs(LOG_DIR, exist_ok=True)
 
 subprocess.call(['chmod', '755', LOG_DIR])
 
@@ -48,7 +47,7 @@ LOGGING = {
         },
         'file_error': {
             'class': 'logging.handlers.RotatingFileHandler',
-            'level': 'ERROR',
+            'level': 'DEBUG',
             'formatter': 'django.server',
             'backupCount': 10,
             'filename': os.path.join(LOG_DIR, 'error.log'),
