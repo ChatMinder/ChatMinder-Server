@@ -6,7 +6,7 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile.prod
-    command: gunicorn server.wsgi:application --bind 0.0.0.0:8888
+    command: gunicorn server.wsgi:application --bind 0.0.0.0:8001
     environment:
       DJANGO_SETTINGS_MODULE: server.settings.prod
     env_file:
@@ -15,10 +15,52 @@ services:
       - static:/home/app/web/static
       - media:/home/app/web/media
     expose:
-      - 8888
+      - 8001
     entrypoint:
       - sh
       - config/docker/entrypoint.prod.sh
+  
+  web2:
+    container_name: web2
+    build:
+      context: ./
+      dockerfile: Dockerfile.prod
+    command: gunicorn server.wsgi:application --bind 0.0.0.0:8002
+    environment:
+      DJANGO_SETTINGS_MODULE: server.settings.prod
+    env_file:
+      - .env
+    volumes:
+      - static:/home/app/web/static
+      - media:/home/app/web/media
+    expose:
+      - 8002
+    entrypoint:
+      - sh
+      - config/docker/entrypoint.prod.sh
+    depends_on:
+      - web
+  
+  web3:
+    container_name: web3
+    build:
+      context: ./
+      dockerfile: Dockerfile.prod
+    command: gunicorn server.wsgi:application --bind 0.0.0.0:8003
+    environment:
+      DJANGO_SETTINGS_MODULE: server.settings.prod
+    env_file:
+      - .env
+    volumes:
+      - static:/home/app/web/static
+      - media:/home/app/web/media
+    expose:
+      - 8003
+    entrypoint:
+      - sh
+      - config/docker/entrypoint.prod.sh
+    depends_on:
+      - web2
 
   nginx:
     container_name: nginx
@@ -26,13 +68,14 @@ services:
     volumes:
       - static:/home/app/web/static
       - media:/home/app/web/media
-      - /etc/letsencrypt/archive/chatminder.app:/etc/nginx/conf.d/certificate
+      - /etc/letsencrypt/archive/chatminder.app-0002:/etc/nginx/conf.d/certificate
       - /home/ubuntu/srv/ubuntu/server/static:/etc/nginx/conf.d/html
+      - /home/ubuntu/srv/ubuntu/log:/var/log/nginx
     ports:
       - "80:80"
       - "443:443"
     depends_on:
-      - web
+      - web3
 
 
 volumes:

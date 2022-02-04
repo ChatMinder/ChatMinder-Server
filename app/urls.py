@@ -3,7 +3,7 @@ from django.urls import include, path
 from rest_framework import routers
 
 from app.views import HelloView, KakaoLoginView, ImagesView, UserView, BookmarkView, TagList, TagDetail, MemoTextFilter, \
-    MemoLinkFilter, MemoTagFilter, TokenView, MemoImageFilter, MemoTag, TagDefaultFilter, SigninView, SignupView
+    MemoLinkFilter, MemoTagFilter, TokenView, MemoImageFilter, MemoTag, TagDefaultFilter, SigninView, SignupView, DuplicateCheckView
 
 from app.views import MemoList, MemoDetail
 from server.settings import base
@@ -26,6 +26,7 @@ urlpatterns = [
     path('tags', TagList.as_view()),
     path('tags/<int:pk>', TagDetail.as_view()),
     path('auth/signin', SigninView.as_view()),
-    path('auth/signup', SignupView.as_view())
+    path('auth/signup', SignupView.as_view()),
+    path('auth/duplicate', DuplicateCheckView.as_view()),
 ] + static(base.MEDIA_URL, document_root=base.MEDIA_ROOT)
 

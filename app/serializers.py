@@ -5,6 +5,18 @@ from django.contrib.auth import authenticate
 
 from app.models import User, Memo, Tag, Image
 
+def user_created_init(attrs, user):
+    color = '#C8D769'
+    timestamp = attrs.get('timestamp', None)
+    tag = Tag.objects.create(tag_name='태그입력',
+                             tag_color=color,
+                             user=user)
+    tag.save()
+    memo = Memo.objects.create(memo_text='첫번째 메모를 작성해 보세요.',
+                               timestamp=timestamp,
+                               tag=tag, user=user, is_marked=True)
+    memo.save()
+
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
@@ -38,7 +50,7 @@ class TokenSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
-        attrs.update({'password': ''})
+        attrs.update({'password': None})
         user, created = User.objects.get_or_create(
             kakao_id=attrs.get('kakao_id', None),
             kakao_email=attrs.get('kakao_email', None)
@@ -48,16 +60,7 @@ class TokenSerializer(TokenObtainPairSerializer):
         user.save()
 
         if created:
-            color = '#C8D769'
-            timestamp = attrs.get('timestamp', None)
-            tag = Tag.objects.create(tag_name='태그입력',
-                                     tag_color=color,
-                                     user=user)
-            tag.save()
-            memo = Memo.objects.create(memo_text='첫번째 메모를 작성해 보세요.',
-                                       timestamp=timestamp,
-                                       tag=tag, user=user, is_marked=True)
-            memo.save()
+            user_created_init(attrs, user)
 
         authenticate(username=user.USERNAME_FIELD, is_kakao=True)
 
@@ -164,6 +167,7 @@ class TagSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     kakao_id = serializers.CharField()
     password = serializers.CharField(write_only=True)
+    timestamp = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
@@ -177,6 +181,7 @@ class UserSerializer(serializers.ModelSerializer):
         )
         user.set_password(password)
         user.save()
+        user_created_init(validated_data, user)
         return user
 
 class UserTokenSerializer(TokenObtainPairSerializer):
@@ -198,9 +203,7 @@ class UserTokenSerializer(TokenObtainPairSerializer):
             kakao_id=attrs.get('kakao_id', None),
         )
         password = attrs.get('password')
-        print(password)
-
-        authenticate(username=user.USERNAME_FIELD, password=password, is_kakao=True)
+        authenticate(username=user.USERNAME_FIELD, password=password)
         validated_data = super().validate(attrs)
         refresh = self.get_token(user)
         validated_data["refresh"] = str(refresh)

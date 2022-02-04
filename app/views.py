@@ -1,5 +1,7 @@
 import json
+import logging
 from itertools import chain
+import uuid
 
 from django.db.models import Q
 
@@ -30,6 +32,13 @@ from app.exceptions import *
 from app.mixins import *
 
 from server.settings.base import env
+
+server_uuid = uuid.uuid4()
+
+def validate_login_data(data):
+    password = data.get('password', None)
+    if (password is None) or (len(password) <= 4):
+        raise TokenError
 
 
 def validate_kakao_response(kakao_response):
@@ -112,11 +121,13 @@ def get_image_data(request, index):
         "file": image_file
     }
 
+logger = logging.getLogger('my')
 
 # /hello
 class HelloView(APIView):
     def get(self, request):
-        return Response("GET Hello", status=200)
+        logger.info("HELLO")
+        return JsonResponse({"message":server_uuid}, status=200)
 
     def post(self, request):
         return Response("POST Hello", status=200)
@@ -156,13 +167,15 @@ class SigninView(APIView):
     # 로그인
     def post(self, request):
         data = JSONParser().parse(request)
+        validate_login_data(data)
         user_data = {
             "kakao_id": data.get('login_id', None),
             "password": data.get("password", None)
         }
         serializer = UserTokenSerializer(data=user_data)
         if serializer.is_valid():
-            return Response(serializer.data, status=200)
+            return JsonResponse({"message": "로그인 성공", "status": 200, "refresh_token": serializer.data['refresh'],
+                             "access_token": serializer.data['access']}, status=200)
         return Response(serializer.errors, status=400)
 
 
@@ -183,6 +196,16 @@ class SignupView(APIView):
             return Response(serializer.data, status=200)
         return Response(serializer.errors, status=400)
 
+
+class DuplicateCheckView(APIView):
+    def get(self, request):
+        login_id = request.GET.get('login_id', None)
+        if login_id is None:
+            return JsonResponse(data={}, status=400)
+        user_exists = User.objects.filter(kakao_id=login_id).exists()
+        if user_exists is True:
+            return JsonResponse(data={}, status=409)
+        return JsonResponse(data={}, status=200)
 
 # /auth/token
 class TokenView(UserAuthMixin, APIView):
